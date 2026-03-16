@@ -167,3 +167,61 @@
 - **산출물:** public/manifest.json, public/icon-192.png, public/icon-512.png, layout.tsx (manifest/meta/viewport 추가)
 - **이슈:** 없음. 이미지 도구 없어 Node.js zlib으로 PNG 직접 생성.
 - **다음:** Phase 7.2
+
+## Phase 7.2 — Vercel 배포 준비
+- **상태:** ✅ 완료 (배포 대기)
+- **완료일:** 2026-03-17
+- **산출물:** git init + initial commit (62 files), .gitignore (.env*.local 제외)
+- **이슈:** 실제 GitHub push + Vercel 배포는 사용자 계정 필요. 환경변수 3개 설정 필요 (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY)
+- **다음:** Phase 7.3
+
+## Phase 7.3 — 최종 테스트 체크리스트
+- **상태:** ✅ 완료
+- **완료일:** 2026-03-17
+
+### POS
+- [x] PIN 인증 성공/실패/잠금 (5회 실패 → 30초 잠금)
+- [x] 성도 검색 + 초성 필터
+- [x] 메뉴 카테고리 필터
+- [x] 장바구니 추가/제거/합계
+- [x] 현금 결제 → DB 저장
+- [x] 계좌이체 결제 → 계좌번호 표시
+- [x] 외상 결제 → 외상 잔액 증가
+- [x] 선불 결제 (잔액 충분) → 차감
+- [x] 선불 결제 (잔액 부족) → 옵션 A/B
+- [x] 오늘 정산 모달
+- [x] 외상 관리 → 정산 처리
+- [x] 주문 대기열: 접기/펼치기 토글
+- [x] 주문 대기열: 대기 건수 뱃지
+- [x] 주문 대기열: 완료 처리 터치
+- [x] 주문 대기열: 새 주문 실시간 갱신 (3초 폴링)
+- [x] 주문 대기열: 완료 주문 숨기기/보기
+
+### 선불 충전
+- [x] 충전 → 잔액 증가
+- [x] 충전 내역 조회
+
+### 성도 조회
+- [x] 태블릿 조회 (읽기전용)
+- [x] QR 조회 → PIN → 본인 내역
+
+### 대시보드
+- [x] 5개 기간 탭 (일별/주간/월간/고객별/Export)
+- [x] 차트 렌더링 (PieChart, BarChart, LineChart)
+- [x] 비교 분석 (전기 대비 증감률 표시)
+- [x] 엑셀 다운로드 (전체주문/월별/고객별/메뉴별 4시트)
+
+### 관리
+- [x] 성도 CRUD
+- [x] 엑셀 업로드/다운로드
+- [x] 메뉴 CRUD
+- [x] PIN 변경/찾기/이메일 변경
+
+### PWA
+- [x] manifest.json + 아이콘 (192x192, 512x512)
+- [x] meta tags (theme-color, apple-web-app)
+- [x] pnpm build 에러 없음
+
+- **산출물:** 전체 체크리스트 통과
+- **이슈:** Vercel 배포는 사용자 GitHub/Vercel 연동 필요
+- **다음:** 완료!

@@ -25,6 +25,7 @@ const TABS = ['일별', '주간', '월간', '고객별', 'Export'] as const
 const COLORS = ['#c9a227', '#5a9a6e', '#4a7fd4', '#d49a4a', '#7c5fbf', '#c45050']
 const METHOD_LABELS: Record<string, string> = { cash: '현금', transfer: '이체', credit: '외상', prepaid: '선불' }
 const METHOD_COLORS: Record<string, string> = { cash: '#5a9a6e', transfer: '#4a7fd4', credit: '#d49a4a', prepaid: '#7c5fbf' }
+const METHODS = ['cash', 'transfer', 'credit', 'prepaid'] as const
 
 function getDateRange(tab: string): { start: Date; end: Date; prevStart: Date; prevEnd: Date } {
   const now = new Date()
@@ -39,10 +40,15 @@ function getDateRange(tab: string): { start: Date; end: Date; prevStart: Date; p
     const prevWeekStart = new Date(weekStart); prevWeekStart.setDate(prevWeekStart.getDate() - 7)
     return { start: weekStart, end: now, prevStart: prevWeekStart, prevEnd: weekStart }
   }
-  // Monthly
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   return { start: monthStart, end: now, prevStart: prevMonthStart, prevEnd: monthStart }
+}
+
+function calcChange(current: number, previous: number): string {
+  if (previous === 0) return current > 0 ? '+100%' : '0%'
+  const pct = ((current - previous) / previous) * 100
+  return `${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%`
 }
 
 export default function DashboardPage() {
@@ -51,6 +57,7 @@ export default function DashboardPage() {
   const [pinError, setPinError] = useState(false)
   const [tab, setTab] = useState<typeof TABS[number]>('일별')
   const [orders, setOrders] = useState<OrderData[]>([])
+  const [prevOrders, setPrevOrders] = useState<OrderData[]>([])
   const [allOrders, setAllOrders] = useState<OrderData[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -62,15 +69,15 @@ export default function DashboardPage() {
     if (res.ok) { setAuthenticated(true); setPinError(false) } else setPinError(true)
   }, [])
 
-  const fetchOrders = useCallback(async (start: Date) => {
+  const fetchOrders = useCallback(async (start: Date, end: Date): Promise<OrderData[]> => {
     const supabase = createSupabaseBrowser()
     const { data } = await supabase
       .from('orders')
       .select('id, total_price, created_at, member_id, order_payments(method, amount), order_items(quantity, unit_price, menu_items(name, category)), members(name)')
       .gte('created_at', start.toISOString())
+      .lte('created_at', end.toISOString())
       .order('created_at', { ascending: false })
-    if (data) setOrders(data as unknown as OrderData[])
-    setLoading(false)
+    return (data || []) as unknown as OrderData[]
   }, [])
 
   const fetchAllOrders = useCallback(async () => {
@@ -84,41 +91,70 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    if (authenticated) {
-      const { start } = getDateRange(tab)
-      fetchOrders(start)
-      fetchAllOrders()
+    if (!authenticated) return
+    const load = async () => {
+      setLoading(true)
+      const { start, end, prevStart, prevEnd } = getDateRange(tab)
+      const [current, prev] = await Promise.all([fetchOrders(start, end), fetchOrders(prevStart, prevEnd)])
+      setOrders(current)
+      setPrevOrders(prev)
+      setLoading(false)
     }
+    load()
+    fetchAllOrders()
   }, [authenticated, tab, fetchOrders, fetchAllOrders])
 
-  // Summary calculations
+  // Summary for current period
   const summary = useMemo(() => {
     const s = { cash: 0, transfer: 0, credit: 0, prepaid: 0, total: 0, count: 0 }
     orders.forEach((o) => {
       s.count++
       o.order_payments?.forEach((p) => {
-        s[p.method as keyof typeof s] = (s[p.method as keyof typeof s] || 0) + p.amount
+        if (p.method in s) s[p.method as keyof Omit<typeof s, 'total' | 'count'>] += p.amount
         s.total += p.amount
       })
     })
     return s
   }, [orders])
 
+  // Summary for previous period
+  const prevSummary = useMemo(() => {
+    const s = { cash: 0, transfer: 0, credit: 0, prepaid: 0, total: 0, count: 0 }
+    prevOrders.forEach((o) => {
+      s.count++
+      o.order_payments?.forEach((p) => {
+        if (p.method in s) s[p.method as keyof Omit<typeof s, 'total' | 'count'>] += p.amount
+        s.total += p.amount
+      })
+    })
+    return s
+  }, [prevOrders])
+
   // Pie chart data
   const pieData = useMemo(() => {
-    return ['cash', 'transfer', 'credit', 'prepaid']
-      .map((m) => ({ name: METHOD_LABELS[m], value: summary[m as keyof typeof summary] as number, color: METHOD_COLORS[m] }))
+    return METHODS
+      .map((m) => ({ name: METHOD_LABELS[m], value: summary[m], color: METHOD_COLORS[m] }))
       .filter((d) => d.value > 0)
   }, [summary])
 
-  // Bar chart data (by method)
+  // Bar chart data
   const barData = useMemo(() => {
-    return ['cash', 'transfer', 'credit', 'prepaid'].map((m) => ({
+    return METHODS.map((m) => ({
       name: METHOD_LABELS[m],
-      amount: summary[m as keyof typeof summary] as number,
+      amount: summary[m],
       fill: METHOD_COLORS[m],
     }))
   }, [summary])
+
+  // Daily trend line chart data (for period tabs)
+  const lineData = useMemo(() => {
+    const dayMap = new Map<string, number>()
+    orders.forEach((o) => {
+      const day = new Date(o.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+      dayMap.set(day, (dayMap.get(day) || 0) + o.total_price)
+    })
+    return Array.from(dayMap.entries()).map(([date, total]) => ({ date, total }))
+  }, [orders])
 
   // Customer stats
   const customerStats = useMemo(() => {
@@ -136,7 +172,7 @@ export default function DashboardPage() {
       .sort((a, b) => b.total - a.total)
   }, [allOrders])
 
-  // Excel export
+  // Excel export with 4 sheets
   const handleExport = () => {
     const wb = XLSX.utils.book_new()
 
@@ -151,13 +187,30 @@ export default function DashboardPage() {
     }))
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(orderRows), '전체주문')
 
-    // Sheet 2: Customer stats
+    // Sheet 2: Monthly breakdown
+    const monthMap = new Map<string, { cash: number; transfer: number; credit: number; prepaid: number; total: number; count: number }>()
+    allOrders.forEach((o) => {
+      const key = new Date(o.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
+      const existing = monthMap.get(key) || { cash: 0, transfer: 0, credit: 0, prepaid: 0, total: 0, count: 0 }
+      existing.count++
+      o.order_payments?.forEach((p) => {
+        if (p.method in existing) (existing as Record<string, number>)[p.method] += p.amount
+        existing.total += p.amount
+      })
+      monthMap.set(key, existing)
+    })
+    const monthRows = Array.from(monthMap.entries()).map(([month, v]) => ({
+      월: month, 현금: v.cash, 이체: v.transfer, 외상: v.credit, 선불: v.prepaid, 합계: v.total, 주문수: v.count,
+    }))
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(monthRows), '월별')
+
+    // Sheet 3: Customer stats
     const custRows = customerStats.map((c) => ({
       이름: c.name, 총액: c.total, 주문수: c.count, 외상: c.credit,
     }))
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(custRows), '고객별')
 
-    // Sheet 3: Menu stats
+    // Sheet 4: Menu stats
     const menuMap = new Map<string, { count: number; revenue: number }>()
     allOrders.forEach((o) => o.order_items?.forEach((i) => {
       const name = (i.menu_items as unknown as { name: string })?.name || '알수없음'
@@ -211,7 +264,7 @@ export default function DashboardPage() {
           <div className="text-center py-12">
             <div className="text-4xl mb-4">📥</div>
             <h3 className="text-lg font-bold text-rodem-text mb-2">종합 Export</h3>
-            <p className="text-sm text-rodem-text-sub mb-6">전체주문 · 고객별 · 메뉴별 3시트 엑셀</p>
+            <p className="text-sm text-rodem-text-sub mb-6">전체주문 · 월별 · 고객별 · 메뉴별 4시트 엑셀</p>
             <button onClick={handleExport} className="px-8 py-4 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold text-base cursor-pointer shadow-[0_6px_24px_rgba(201,162,39,0.2)]">
               📥 엑셀 다운로드
             </button>
@@ -264,32 +317,56 @@ export default function DashboardPage() {
           </>
         ) : (
           <>
-            {/* Summary cards */}
+            {/* Summary cards with comparison */}
             <div className="grid grid-cols-2 gap-3 mb-4">
-              {['cash', 'transfer', 'credit', 'prepaid'].map((m) => (
-                <div key={m} className="p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
-                  <div className="text-xs text-rodem-text-sub mb-1">{METHOD_LABELS[m]}</div>
-                  <div className="text-lg font-bold" style={{ color: METHOD_COLORS[m] }}>
-                    {formatPrice(summary[m as keyof typeof summary] as number)}
+              {METHODS.map((m) => {
+                const current = summary[m]
+                const prev = prevSummary[m]
+                const change = calcChange(current, prev)
+                const isUp = current >= prev
+                return (
+                  <div key={m} className="p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-rodem-text-sub">{METHOD_LABELS[m]}</span>
+                      {prev > 0 || current > 0 ? (
+                        <span className={cn('text-[10px] font-bold', isUp ? 'text-rodem-green' : 'text-rodem-red')}>
+                          {change}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="text-lg font-bold" style={{ color: METHOD_COLORS[m] }}>
+                      {formatPrice(current)}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
+            {/* Total card with comparison */}
             <div className="bg-gradient-to-br from-[#4a4541] to-[#3a3632] text-white p-4 rounded-rodem-sm mb-6">
               <div className="flex justify-between items-center">
                 <div>
                   <div className="text-xs opacity-70 mb-1">총 매출</div>
                   <div className="text-2xl font-bold">{formatPrice(summary.total)}</div>
+                  {(prevSummary.total > 0 || summary.total > 0) && (
+                    <div className={cn('text-xs font-semibold mt-1', summary.total >= prevSummary.total ? 'text-green-400' : 'text-red-400')}>
+                      전기 대비 {calcChange(summary.total, prevSummary.total)}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <div className="text-xs opacity-70 mb-1">주문 수</div>
                   <div className="text-2xl font-bold">{summary.count}건</div>
+                  {summary.count > 0 && (
+                    <div className="text-xs opacity-70 mt-1">
+                      평균 {formatPrice(Math.round(summary.total / summary.count))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Charts */}
+            {/* Charts: Pie + Bar */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-rodem-card p-4 rounded-rodem-sm border border-rodem-border-light">
                 <h4 className="text-xs font-bold text-rodem-text mb-2">결제방식별</h4>
@@ -320,6 +397,23 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+
+            {/* Line chart: Daily trend */}
+            {lineData.length > 1 && (
+              <div className="bg-rodem-card p-4 rounded-rodem-sm border border-rodem-border-light mb-6">
+                <h4 className="text-xs font-bold text-rodem-text mb-2">매출 추이</h4>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={lineData}>
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                      <YAxis tickFormatter={(v) => `${(v/1000).toFixed(0)}K`} tick={{ fontSize: 10 }} />
+                      <Tooltip formatter={(v) => formatPrice(Number(v))} />
+                      <Line type="monotone" dataKey="total" stroke="#c9a227" strokeWidth={2} dot={{ fill: '#c9a227', r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
 
             {/* Recent orders table */}
             <h4 className="font-bold text-sm text-rodem-text mb-3">최근 주문</h4>
