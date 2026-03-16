@@ -1,0 +1,24 @@
+{
+  "name": "로뎀나무 카페",
+  "short_name": "로뎀나무",
+  "description": "청주남부교회 로뎀나무 카페 POS 시스템",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eae6df",
+  "theme_color": "#44403c",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

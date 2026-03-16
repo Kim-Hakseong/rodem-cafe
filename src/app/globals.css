@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #e8e3da;
+    border-radius: 10px;
+  }
+  button {
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  button:active {
+    transform: scale(0.97);
+  }
+}
