@@ -61,9 +61,9 @@ export default function CreditManager({ onClose }: CreditManagerProps) {
       ) : (
         <>
           <div className="bg-rodem-orange-light p-4 rounded-rodem-sm mb-4 border border-rodem-orange/20">
-            <div className="text-xs text-rodem-orange mb-1">총 미정산 외상</div>
-            <div className="text-2xl font-bold text-rodem-orange">{formatPrice(totalCredit)}</div>
-            <div className="text-xs text-rodem-text-sub mt-1">{members.length}명</div>
+            <div className="text-sm text-rodem-orange mb-1">총 미정산 외상</div>
+            <div className="text-[26px] font-bold text-rodem-orange">{formatPrice(totalCredit)}</div>
+            <div className="text-sm text-rodem-text-sub mt-1">{members.length}명</div>
           </div>
 
           <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -71,28 +71,28 @@ export default function CreditManager({ onClose }: CreditManagerProps) {
               <div key={member.id} className="p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-semibold text-sm text-rodem-text">{member.name}</div>
-                    <div className="text-rodem-orange font-bold text-sm">{formatPrice(member.credit_balance)}</div>
+                    <div className="font-semibold text-base text-rodem-text">{member.name}</div>
+                    <div className="text-rodem-orange font-bold text-base">{formatPrice(member.credit_balance)}</div>
                   </div>
                   {settling === member.id ? (
                     <div className="flex items-center gap-2">
                       <select
                         value={settleMethod}
                         onChange={(e) => setSettleMethod(e.target.value as 'cash' | 'transfer')}
-                        className="text-xs p-1 rounded border border-rodem-border-light bg-white"
+                        className="text-sm p-1 rounded border border-rodem-border-light bg-white"
                       >
                         <option value="cash">현금</option>
                         <option value="transfer">이체</option>
                       </select>
                       <button
                         onClick={() => handleSettle(member.id, member.credit_balance)}
-                        className="px-3 py-1.5 rounded-[10px] bg-rodem-green text-white text-xs font-bold cursor-pointer"
+                        className="px-3 py-1.5 rounded-[10px] bg-rodem-green text-white text-sm font-bold cursor-pointer"
                       >
                         확인
                       </button>
                       <button
                         onClick={() => setSettling(null)}
-                        className="text-rodem-text-sub text-xs cursor-pointer bg-transparent border-none"
+                        className="text-rodem-text-sub text-sm cursor-pointer bg-transparent border-none"
                       >
                         취소
                       </button>
@@ -100,7 +100,7 @@ export default function CreditManager({ onClose }: CreditManagerProps) {
                   ) : (
                     <button
                       onClick={() => setSettling(member.id)}
-                      className="px-3 py-1.5 rounded-[10px] bg-rodem-green-light border border-rodem-green text-rodem-green text-xs font-bold cursor-pointer"
+                      className="px-3 py-1.5 rounded-[10px] bg-rodem-green-light border border-rodem-green text-rodem-green text-sm font-bold cursor-pointer"
                     >
                       정산
                     </button>
@@ -109,7 +109,7 @@ export default function CreditManager({ onClose }: CreditManagerProps) {
               </div>
             ))}
             {members.length === 0 && (
-              <div className="text-center py-8 text-rodem-text-sub text-sm">미정산 외상이 없습니다</div>
+              <div className="text-center py-8 text-rodem-text-sub text-base">미정산 외상이 없습니다</div>
             )}
           </div>
         </>

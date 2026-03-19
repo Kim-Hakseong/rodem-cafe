@@ -37,10 +37,10 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
       >
         {title && (
           <div className="flex items-center justify-between p-5 border-b border-rodem-border-light">
-            <h3 className="text-lg font-bold text-rodem-text">{title}</h3>
+            <h3 className="text-xl font-bold text-rodem-text">{title}</h3>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-[10px] bg-rodem-border-light text-rodem-text-sub flex items-center justify-center text-sm hover:bg-rodem-border"
+              className="w-8 h-8 rounded-[10px] bg-rodem-border-light text-rodem-text-sub flex items-center justify-center text-base hover:bg-rodem-border"
             >
               ✕
             </button>

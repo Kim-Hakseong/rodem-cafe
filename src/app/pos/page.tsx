@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import PinInput from '@/components/ui/PinInput'
 import Header from '@/components/ui/Header'
 import StepIndicator from '@/components/ui/StepIndicator'
@@ -33,11 +34,23 @@ export type PaymentInfo = {
   amount: number
 }[]
 
-const STEPS = ['성도 선택', '메뉴 선택', '결제', '확인']
+const STEPS = ['메뉴 선택', '성도 선택', '결제', '확인']
 
 export default function POSPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-rodem-bg font-sans text-rodem-text-sub">로딩 중...</div>}>
+      <POSPageInner />
+    </Suspense>
+  )
+}
+
+function POSPageInner() {
   const router = useRouter()
-  const [authenticated, setAuthenticated] = useState(false)
+  const searchParams = useSearchParams()
+  const mode = searchParams.get('mode') === 'customer' ? 'customer' : 'staff' as 'staff' | 'customer'
+  const isCustomer = mode === 'customer'
+
+  const [authenticated, setAuthenticated] = useState(isCustomer)
   const [step, setStep] = useState(0)
   const [selectedMember, setSelectedMember] = useState<SelectedMember | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -60,7 +73,7 @@ export default function POSPage() {
     setToast({ show: true, message, type })
   }, [])
 
-  // PIN verification
+  // PIN verification (staff only)
   const handlePinComplete = useCallback(async (pin: string) => {
     if (locked) return
 
@@ -115,7 +128,7 @@ export default function POSPage() {
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0)
 
-  // PIN screen
+  // PIN screen (staff only)
   if (!authenticated) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#efebe4] via-[#e5e0d8] to-[#dedad2] relative overflow-hidden font-sans">
@@ -124,23 +137,23 @@ export default function POSPage() {
 
         <button
           onClick={() => router.push('/')}
-          className="absolute top-4 left-4 bg-gradient-to-br from-[#f0ece4] to-[#e8e3da] border-none text-sm text-rodem-text-sub cursor-pointer py-2 px-3.5 rounded-[10px] z-10"
+          className="absolute top-4 left-4 bg-gradient-to-br from-[#f0ece4] to-[#e8e3da] border-none text-base text-rodem-text-sub cursor-pointer py-2 px-3.5 rounded-[10px] z-10"
         >
           ← 뒤로
         </button>
 
-        <div className="text-[40px] mb-4 relative z-10">🔒</div>
-        <h2 className="text-[22px] font-bold mb-2 text-rodem-text relative z-10">봉사자 인증</h2>
-        <p className="text-sm text-rodem-text-sub mb-8 relative z-10">PIN 6자리를 입력하세요</p>
+        <div className="text-[42px] mb-4 relative z-10">🔒</div>
+        <h2 className="text-[24px] font-bold mb-2 text-rodem-text relative z-10">봉사자 인증</h2>
+        <p className="text-base text-rodem-text-sub mb-8 relative z-10">PIN 6자리를 입력하세요</p>
 
         {pinError && !locked && (
-          <p className="text-rodem-red text-sm font-semibold mb-3 relative z-10">
+          <p className="text-rodem-red text-base font-semibold mb-3 relative z-10">
             PIN이 틀렸습니다 ({attempts}/5)
           </p>
         )}
         {locked && (
           <div className="py-2.5 px-6 rounded-[10px] bg-rodem-red/10 mb-4 text-center relative z-10">
-            <p className="text-rodem-red text-sm font-bold">🔒 5회 실패 — {lockTimer}초 후 재시도</p>
+            <p className="text-rodem-red text-base font-bold">🔒 5회 실패 — {lockTimer}초 후 재시도</p>
           </div>
         )}
 
@@ -156,18 +169,18 @@ export default function POSPage() {
     )
   }
 
-  // POS main screen
-  const headerRight = (
+  // Header right buttons — staff only (정산, 외상)
+  const headerRight = isCustomer ? undefined : (
     <div className="flex gap-1.5">
       <button
         onClick={() => setShowSummary(true)}
-        className="bg-white/10 border-none text-white py-1.5 px-3 rounded-lg text-xs font-semibold cursor-pointer"
+        className="bg-white/10 border-none text-white py-1.5 px-3 rounded-lg text-base font-semibold cursor-pointer"
       >
         📊 정산
       </button>
       <button
         onClick={() => setShowCredit(true)}
-        className="bg-white/10 border-none text-white py-1.5 px-3 rounded-lg text-xs font-semibold cursor-pointer"
+        className="bg-white/10 border-none text-white py-1.5 px-3 rounded-lg text-base font-semibold cursor-pointer"
       >
         💰 외상
       </button>
@@ -180,32 +193,43 @@ export default function POSPage() {
         isOpen={queueOpen}
         onToggle={() => setQueueOpen(!queueOpen)}
         refreshTrigger={orderRefresh}
+        mode={mode}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
-          title="📋 봉사자 주문"
-          onBack={() => { setAuthenticated(false); resetOrder() }}
+          title={isCustomer ? '🛒 주문 하기' : '📋 봉사자 페이지'}
+          onBack={() => {
+            if (isCustomer) {
+              router.push('/')
+            } else {
+              setAuthenticated(false)
+              resetOrder()
+            }
+          }}
           right={headerRight}
         />
         <StepIndicator steps={STEPS} current={step} />
 
         <div className="flex-1 overflow-y-auto">
           {step === 0 && (
-            <MemberSelect
-              onSelect={(member) => {
-                setSelectedMember(member)
-                setStep(1)
-              }}
-            />
-          )}
-          {step === 1 && selectedMember && (
             <MenuSelect
               cart={cart}
               setCart={setCart}
-              onNext={() => setStep(2)}
-              onBack={() => setStep(0)}
+              onNext={() => setStep(1)}
+              onBack={() => {
+                if (isCustomer) router.push('/')
+                else { setAuthenticated(false); resetOrder() }
+              }}
               cartTotal={cartTotal}
+            />
+          )}
+          {step === 1 && (
+            <MemberSelect
+              onSelect={(member) => {
+                setSelectedMember(member)
+                setStep(2)
+              }}
             />
           )}
           {step === 2 && selectedMember && (
@@ -217,6 +241,7 @@ export default function POSPage() {
                 setStep(3)
               }}
               onBack={() => setStep(1)}
+              mode={mode}
             />
           )}
           {step === 3 && selectedMember && (
@@ -227,15 +252,16 @@ export default function POSPage() {
               cartTotal={cartTotal}
               onComplete={handleOrderComplete}
               onBack={() => setStep(2)}
+              mode={mode}
             />
           )}
         </div>
       </div>
 
-      {showSummary && (
+      {!isCustomer && showSummary && (
         <TodaySummary onClose={() => setShowSummary(false)} />
       )}
-      {showCredit && (
+      {!isCustomer && showCredit && (
         <CreditManager onClose={() => setShowCredit(false)} />
       )}
 

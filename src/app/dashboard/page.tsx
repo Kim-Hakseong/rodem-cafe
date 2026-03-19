@@ -231,11 +231,11 @@ export default function DashboardPage() {
   if (!authenticated) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#efebe4] via-[#e5e0d8] to-[#dedad2] font-sans relative">
-        <button onClick={() => router.push('/')} className="absolute top-4 left-4 bg-gradient-to-br from-[#f0ece4] to-[#e8e3da] border-none text-sm text-rodem-text-sub cursor-pointer py-2 px-3.5 rounded-[10px]">← 뒤로</button>
-        <div className="text-[40px] mb-4">📊</div>
-        <h2 className="text-[22px] font-bold mb-2 text-rodem-text">정산 대시보드</h2>
-        <p className="text-sm text-rodem-text-sub mb-8">관리자 PIN을 입력하세요</p>
-        {pinError && <p className="text-rodem-red text-sm font-semibold mb-3">PIN이 틀렸습니다</p>}
+        <button onClick={() => router.push('/')} className="absolute top-4 left-4 bg-gradient-to-br from-[#f0ece4] to-[#e8e3da] border-none text-base text-rodem-text-sub cursor-pointer py-2 px-3.5 rounded-[10px]">← 뒤로</button>
+        <div className="text-[42px] mb-4">📊</div>
+        <h2 className="text-[24px] font-bold mb-2 text-rodem-text">정산 대시보드</h2>
+        <p className="text-base text-rodem-text-sub mb-8">관리자 PIN을 입력하세요</p>
+        {pinError && <p className="text-rodem-red text-base font-semibold mb-3">PIN이 틀렸습니다</p>}
         <PinInput onComplete={handlePinComplete} error={pinError} onReset={() => setPinError(false)} />
       </div>
     )
@@ -249,7 +249,7 @@ export default function DashboardPage() {
       <div className="flex gap-1 px-4 py-3 border-b border-rodem-border-light overflow-x-auto">
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)} className={cn(
-            'px-4 py-2 rounded-rodem-sm text-sm font-semibold whitespace-nowrap cursor-pointer border',
+            'px-4 py-2 rounded-rodem-sm text-base font-semibold whitespace-nowrap cursor-pointer border',
             tab === t ? 'bg-rodem-gold text-white border-rodem-gold' : 'bg-rodem-card text-rodem-text-sub border-rodem-border-light'
           )}>
             {t}
@@ -263,9 +263,9 @@ export default function DashboardPage() {
         ) : tab === 'Export' ? (
           <div className="text-center py-12">
             <div className="text-4xl mb-4">📥</div>
-            <h3 className="text-lg font-bold text-rodem-text mb-2">종합 Export</h3>
-            <p className="text-sm text-rodem-text-sub mb-6">전체주문 · 월별 · 고객별 · 메뉴별 4시트 엑셀</p>
-            <button onClick={handleExport} className="px-8 py-4 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold text-base cursor-pointer shadow-[0_6px_24px_rgba(201,162,39,0.2)]">
+            <h3 className="text-xl font-bold text-rodem-text mb-2">종합 Export</h3>
+            <p className="text-base text-rodem-text-sub mb-6">전체주문 · 월별 · 고객별 · 메뉴별 4시트 엑셀</p>
+            <button onClick={handleExport} className="px-8 py-4 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold text-lg cursor-pointer shadow-[0_6px_24px_rgba(201,162,39,0.2)]">
               📥 엑셀 다운로드
             </button>
           </div>
@@ -273,21 +273,21 @@ export default function DashboardPage() {
           <>
             <div className="grid grid-cols-3 gap-3 mb-6">
               <div className="p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
-                <div className="text-xs text-rodem-text-sub mb-1">총 고객</div>
-                <div className="text-xl font-bold text-rodem-text">{customerStats.length}명</div>
+                <div className="text-sm text-rodem-text-sub mb-1">총 고객</div>
+                <div className="text-[22px] font-bold text-rodem-text">{customerStats.length}명</div>
               </div>
               <div className="p-3 rounded-rodem-sm bg-rodem-orange-light border border-rodem-orange/20">
-                <div className="text-xs text-rodem-orange mb-1">외상 합계</div>
-                <div className="text-lg font-bold text-rodem-orange">{formatPrice(customerStats.reduce((s, c) => s + c.credit, 0))}</div>
+                <div className="text-sm text-rodem-orange mb-1">외상 합계</div>
+                <div className="text-xl font-bold text-rodem-orange">{formatPrice(customerStats.reduce((s, c) => s + c.credit, 0))}</div>
               </div>
               <div className="p-3 rounded-rodem-sm bg-rodem-gold-light border border-rodem-gold/20">
-                <div className="text-xs text-rodem-gold mb-1">최다 이용</div>
-                <div className="text-sm font-bold text-rodem-text">{customerStats[0]?.name || '-'}</div>
+                <div className="text-sm text-rodem-gold mb-1">최다 이용</div>
+                <div className="text-base font-bold text-rodem-text">{customerStats[0]?.name || '-'}</div>
               </div>
             </div>
 
             {/* Top 10 bar */}
-            <h4 className="font-bold text-sm text-rodem-text mb-3">TOP 10 고객</h4>
+            <h4 className="font-bold text-base text-rodem-text mb-3">TOP 10 고객</h4>
             <div className="h-64 mb-6">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={customerStats.slice(0, 10)} layout="vertical">
@@ -304,12 +304,12 @@ export default function DashboardPage() {
               {customerStats.slice(0, 30).map((c) => (
                 <div key={c.id} className="flex items-center justify-between p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
                   <div>
-                    <div className="text-sm font-semibold text-rodem-text">{c.name}</div>
-                    <div className="text-xs text-rodem-text-sub">{c.count}건</div>
+                    <div className="text-base font-semibold text-rodem-text">{c.name}</div>
+                    <div className="text-sm text-rodem-text-sub">{c.count}건</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-rodem-text">{formatPrice(c.total)}</div>
-                    {c.credit > 0 && <div className="text-[11px] text-rodem-orange">외상 {formatPrice(c.credit)}</div>}
+                    <div className="text-base font-bold text-rodem-text">{formatPrice(c.total)}</div>
+                    {c.credit > 0 && <div className="text-[13px] text-rodem-orange">외상 {formatPrice(c.credit)}</div>}
                   </div>
                 </div>
               ))}
@@ -327,14 +327,14 @@ export default function DashboardPage() {
                 return (
                   <div key={m} className="p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-rodem-text-sub">{METHOD_LABELS[m]}</span>
+                      <span className="text-sm text-rodem-text-sub">{METHOD_LABELS[m]}</span>
                       {prev > 0 || current > 0 ? (
-                        <span className={cn('text-[10px] font-bold', isUp ? 'text-rodem-green' : 'text-rodem-red')}>
+                        <span className={cn('text-xs font-bold', isUp ? 'text-rodem-green' : 'text-rodem-red')}>
                           {change}
                         </span>
                       ) : null}
                     </div>
-                    <div className="text-lg font-bold" style={{ color: METHOD_COLORS[m] }}>
+                    <div className="text-xl font-bold" style={{ color: METHOD_COLORS[m] }}>
                       {formatPrice(current)}
                     </div>
                   </div>
@@ -346,19 +346,19 @@ export default function DashboardPage() {
             <div className="bg-gradient-to-br from-[#4a4541] to-[#3a3632] text-white p-4 rounded-rodem-sm mb-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="text-xs opacity-70 mb-1">총 매출</div>
-                  <div className="text-2xl font-bold">{formatPrice(summary.total)}</div>
+                  <div className="text-sm opacity-70 mb-1">총 매출</div>
+                  <div className="text-[26px] font-bold">{formatPrice(summary.total)}</div>
                   {(prevSummary.total > 0 || summary.total > 0) && (
-                    <div className={cn('text-xs font-semibold mt-1', summary.total >= prevSummary.total ? 'text-green-400' : 'text-red-400')}>
+                    <div className={cn('text-sm font-semibold mt-1', summary.total >= prevSummary.total ? 'text-green-400' : 'text-red-400')}>
                       전기 대비 {calcChange(summary.total, prevSummary.total)}
                     </div>
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="text-xs opacity-70 mb-1">주문 수</div>
-                  <div className="text-2xl font-bold">{summary.count}건</div>
+                  <div className="text-sm opacity-70 mb-1">주문 수</div>
+                  <div className="text-[26px] font-bold">{summary.count}건</div>
                   {summary.count > 0 && (
-                    <div className="text-xs opacity-70 mt-1">
+                    <div className="text-sm opacity-70 mt-1">
                       평균 {formatPrice(Math.round(summary.total / summary.count))}
                     </div>
                   )}
@@ -369,7 +369,7 @@ export default function DashboardPage() {
             {/* Charts: Pie + Bar */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-rodem-card p-4 rounded-rodem-sm border border-rodem-border-light">
-                <h4 className="text-xs font-bold text-rodem-text mb-2">결제방식별</h4>
+                <h4 className="text-sm font-bold text-rodem-text mb-2">결제방식별</h4>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -382,7 +382,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="bg-rodem-card p-4 rounded-rodem-sm border border-rodem-border-light">
-                <h4 className="text-xs font-bold text-rodem-text mb-2">금액 비교</h4>
+                <h4 className="text-sm font-bold text-rodem-text mb-2">금액 비교</h4>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={barData}>
@@ -401,7 +401,7 @@ export default function DashboardPage() {
             {/* Line chart: Daily trend */}
             {lineData.length > 1 && (
               <div className="bg-rodem-card p-4 rounded-rodem-sm border border-rodem-border-light mb-6">
-                <h4 className="text-xs font-bold text-rodem-text mb-2">매출 추이</h4>
+                <h4 className="text-sm font-bold text-rodem-text mb-2">매출 추이</h4>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={lineData}>
@@ -416,17 +416,17 @@ export default function DashboardPage() {
             )}
 
             {/* Recent orders table */}
-            <h4 className="font-bold text-sm text-rodem-text mb-3">최근 주문</h4>
+            <h4 className="font-bold text-base text-rodem-text mb-3">최근 주문</h4>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {orders.slice(0, 20).map((o) => (
                 <div key={o.id} className="flex items-center justify-between p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
                   <div>
-                    <div className="text-sm font-semibold text-rodem-text">{(o.members as unknown as { name: string })?.name}</div>
-                    <div className="text-xs text-rodem-text-sub">
+                    <div className="text-base font-semibold text-rodem-text">{(o.members as unknown as { name: string })?.name}</div>
+                    <div className="text-sm text-rodem-text-sub">
                       {new Date(o.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} · {o.order_payments?.map(p => METHOD_LABELS[p.method]).join('+')}
                     </div>
                   </div>
-                  <div className="text-sm font-bold text-rodem-text">{formatPrice(o.total_price)}</div>
+                  <div className="text-base font-bold text-rodem-text">{formatPrice(o.total_price)}</div>
                 </div>
               ))}
             </div>

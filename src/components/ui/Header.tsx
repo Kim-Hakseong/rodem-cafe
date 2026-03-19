@@ -12,12 +12,12 @@ export default function Header({ title, onBack, right }: HeaderProps) {
       {onBack && (
         <button
           onClick={onBack}
-          className="bg-white/10 border-none text-white w-9 h-9 rounded-[10px] text-lg cursor-pointer flex items-center justify-center"
+          className="bg-white/10 border-none text-white w-9 h-9 rounded-[10px] text-xl cursor-pointer flex items-center justify-center"
         >
           ←
         </button>
       )}
-      <h2 className="text-[17px] font-bold flex-1 tracking-tight">{title}</h2>
+      <h2 className="text-[19px] font-bold flex-1 tracking-tight">{title}</h2>
       {right}
     </div>
   )

@@ -19,6 +19,12 @@ export function getFirstChosung(name: string): string {
   return getChosung(name[0])
 }
 
+// Get all chosungs from a name (e.g. "김학성" → "ㄱㅎㅅ")
+export function getAllChosungs(name: string): string {
+  if (!name) return ''
+  return name.split('').map(getChosung).join('')
+}
+
 // Get current time string
 export function getNowTime(): string {
   const d = new Date()

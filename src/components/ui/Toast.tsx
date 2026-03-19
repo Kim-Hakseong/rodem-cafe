@@ -43,7 +43,7 @@ export default function Toast({
     <div
       className={cn(
         'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-rodem-sm shadow-lg',
-        'transition-all duration-300 font-semibold text-sm',
+        'transition-all duration-300 font-semibold text-base',
         typeStyles[type],
         show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
       )}

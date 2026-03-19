@@ -3,7 +3,7 @@ import { createSupabaseAdmin } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { memberId, items, payments, totalPrice } = await request.json()
+    const { memberId, items, payments, totalPrice, createdBy } = await request.json()
 
     if (!memberId || !items?.length || !payments?.length || !totalPrice) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
         total_price: totalPrice,
         status: 'pending',
         order_number: orderNumber,
-        created_by: 'staff',
+        created_by: createdBy || 'staff',
       })
       .select('id')
       .single()
@@ -51,11 +51,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create order items' }, { status: 500 })
     }
 
-    // Insert payments
+    // Insert payments (set transfer_status for transfer payments)
     const orderPayments = payments.map((p: { method: string; amount: number }) => ({
       order_id: order.id,
       method: p.method,
       amount: p.amount,
+      transfer_status: p.method === 'transfer' ? 'pending' : null,
     }))
 
     const { error: paymentsError } = await supabase.from('order_payments').insert(orderPayments)

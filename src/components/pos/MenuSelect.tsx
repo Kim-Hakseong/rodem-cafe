@@ -74,7 +74,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-rodem-text-sub text-lg">메뉴 불러오는 중...</div>
+        <div className="text-rodem-text-sub text-xl">메뉴 불러오는 중...</div>
       </div>
     )
   }
@@ -88,7 +88,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
             key={cat}
             onClick={() => setCategory(cat)}
             className={cn(
-              'px-4 py-2 rounded-rodem-sm text-sm font-semibold whitespace-nowrap cursor-pointer border',
+              'px-4 py-2 rounded-rodem-sm text-base font-semibold whitespace-nowrap cursor-pointer border',
               category === cat
                 ? 'bg-rodem-gold text-white border-rodem-gold'
                 : 'bg-rodem-card text-rodem-text-sub border-rodem-border-light'
@@ -117,13 +117,13 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
                 )}
               >
                 {qty > 0 && (
-                  <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rodem-gold text-white text-xs font-bold flex items-center justify-center shadow-md">
+                  <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rodem-gold text-white text-sm font-bold flex items-center justify-center shadow-md">
                     {qty}
                   </div>
                 )}
-                <div className="text-2xl mb-1">{emoji}</div>
-                <div className="font-bold text-sm text-rodem-text">{item.name}</div>
-                <div className="text-xs text-rodem-text-sub mt-1">{formatPrice(item.price)}</div>
+                <div className="text-[26px] mb-1">{emoji}</div>
+                <div className="font-bold text-base text-rodem-text">{item.name}</div>
+                <div className="text-sm text-rodem-text-sub mt-1">{formatPrice(item.price)}</div>
               </button>
             )
           })}
@@ -137,12 +137,12 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
             {cart.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-1.5 bg-rodem-gold-light px-3 py-1.5 rounded-full text-sm"
+                className="flex items-center gap-1.5 bg-rodem-gold-light px-3 py-1.5 rounded-full text-base"
               >
                 <span className="font-semibold text-rodem-text">{item.name} ×{item.qty}</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); removeFromCart(item.id) }}
-                  className="text-rodem-text-sub hover:text-rodem-red text-xs cursor-pointer bg-transparent border-none"
+                  className="text-rodem-text-sub hover:text-rodem-red text-sm cursor-pointer bg-transparent border-none"
                 >
                   ✕
                 </button>
@@ -150,19 +150,19 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
             ))}
           </div>
           <div className="flex items-center justify-between">
-            <div className="text-lg font-bold text-rodem-text">
+            <div className="text-xl font-bold text-rodem-text">
               합계 {formatPrice(cartTotal)}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={onBack}
-                className="px-4 py-2.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-sm"
+                className="px-4 py-2.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base"
               >
                 ← 이전
               </button>
               <button
                 onClick={onNext}
-                className="px-6 py-2.5 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold cursor-pointer text-sm shadow-[0_4px_16px_rgba(201,162,39,0.2)]"
+                className="px-6 py-2.5 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold cursor-pointer text-base shadow-[0_4px_16px_rgba(201,162,39,0.2)]"
               >
                 다음 →
               </button>
@@ -175,7 +175,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
         <div className="border-t border-rodem-border-light bg-white p-4">
           <button
             onClick={onBack}
-            className="px-4 py-2.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-sm"
+            className="px-4 py-2.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base"
           >
             ← 이전
           </button>

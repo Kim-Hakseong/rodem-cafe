@@ -14,3 +14,5 @@ export const BANK_ACCOUNT = {
 export const CATEGORIES = ['전체', '커피', '음료', '차', '과자', '기타'] as const
 
 export const CHOSUNG_LIST = ['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'] as const
+
+export const DEPARTMENTS = ['은장회','봉사회','어머니회','청년회','교회학교'] as const

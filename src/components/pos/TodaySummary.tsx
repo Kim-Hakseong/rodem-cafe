@@ -70,8 +70,8 @@ export default function TodaySummary({ onClose }: TodaySummaryProps) {
           <div className="grid grid-cols-2 gap-3 mb-6">
             {['cash', 'transfer', 'credit', 'prepaid'].map((method) => (
               <div key={method} className="p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
-                <div className="text-xs text-rodem-text-sub mb-1">{methodLabels[method].label}</div>
-                <div className={`text-lg font-bold ${methodLabels[method].color}`}>
+                <div className="text-sm text-rodem-text-sub mb-1">{methodLabels[method].label}</div>
+                <div className={`text-xl font-bold ${methodLabels[method].color}`}>
                   {formatPrice(totals[method] || 0)}
                 </div>
               </div>
@@ -79,29 +79,29 @@ export default function TodaySummary({ onClose }: TodaySummaryProps) {
           </div>
 
           <div className="bg-gradient-to-br from-[#4a4541] to-[#3a3632] text-white p-4 rounded-rodem-sm mb-6">
-            <div className="text-xs opacity-70 mb-1">오늘 총 매출</div>
-            <div className="text-2xl font-bold">{formatPrice(totals.total)}</div>
-            <div className="text-xs opacity-70 mt-1">{orders.filter(o => o.status !== 'cancelled').length}건</div>
+            <div className="text-sm opacity-70 mb-1">오늘 총 매출</div>
+            <div className="text-[26px] font-bold">{formatPrice(totals.total)}</div>
+            <div className="text-sm opacity-70 mt-1">{orders.filter(o => o.status !== 'cancelled').length}건</div>
           </div>
 
           {/* Recent orders */}
-          <h4 className="font-bold text-sm text-rodem-text mb-3">최근 주문</h4>
+          <h4 className="font-bold text-base text-rodem-text mb-3">최근 주문</h4>
           <div className="max-h-60 overflow-y-auto space-y-2">
             {orders.map((order) => (
               <div key={order.id} className="flex items-center justify-between p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
                 <div>
-                  <div className="text-sm font-semibold text-rodem-text">
+                  <div className="text-base font-semibold text-rodem-text">
                     #{order.order_number} {(order.members as unknown as { name: string })?.name}
                   </div>
-                  <div className="text-xs text-rodem-text-sub">
+                  <div className="text-sm text-rodem-text-sub">
                     {new Date(order.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
-                <div className="text-sm font-bold text-rodem-text">{formatPrice(order.total_price)}</div>
+                <div className="text-base font-bold text-rodem-text">{formatPrice(order.total_price)}</div>
               </div>
             ))}
             {orders.length === 0 && (
-              <div className="text-center py-4 text-rodem-text-sub text-sm">오늘 주문이 없습니다</div>
+              <div className="text-center py-4 text-rodem-text-sub text-base">오늘 주문이 없습니다</div>
             )}
           </div>
         </>

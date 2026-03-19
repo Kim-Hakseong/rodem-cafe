@@ -81,31 +81,31 @@ export default function LookupPage() {
           {/* Balance cards */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="p-4 rounded-rodem-sm bg-rodem-orange-light border border-rodem-orange/20">
-              <div className="text-xs text-rodem-orange mb-1">📋 외상 잔액</div>
-              <div className="text-xl font-bold text-rodem-orange">
+              <div className="text-sm text-rodem-orange mb-1">📋 외상 잔액</div>
+              <div className="text-[22px] font-bold text-rodem-orange">
                 {formatPrice(selectedMember.credit_balance ?? 0)}
               </div>
             </div>
             <div className="p-4 rounded-rodem-sm bg-rodem-purple-light border border-rodem-purple/20">
-              <div className="text-xs text-rodem-purple mb-1">💰 선불 잔액</div>
-              <div className="text-xl font-bold text-rodem-purple">
+              <div className="text-sm text-rodem-purple mb-1">💰 선불 잔액</div>
+              <div className="text-[22px] font-bold text-rodem-purple">
                 {formatPrice(selectedMember.prepaid_balance ?? 0)}
               </div>
             </div>
           </div>
 
           {/* Order history */}
-          <h3 className="font-bold text-base text-rodem-text mb-3">주문 이력</h3>
+          <h3 className="font-bold text-lg text-rodem-text mb-3">주문 이력</h3>
           <div className="space-y-2">
             {orders.map((order) => (
               <div key={order.id} className="p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
                 <div className="flex justify-between mb-1">
-                  <span className="text-xs text-rodem-text-sub">
+                  <span className="text-sm text-rodem-text-sub">
                     {new Date(order.created_at).toLocaleDateString('ko-KR')} {new Date(order.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
-                  <span className="text-sm font-bold text-rodem-text">{formatPrice(order.total_price)}</span>
+                  <span className="text-base font-bold text-rodem-text">{formatPrice(order.total_price)}</span>
                 </div>
-                <div className="text-xs text-rodem-text-sub">
+                <div className="text-sm text-rodem-text-sub">
                   {order.order_items?.map((item, i) => (
                     <span key={i}>
                       {(item.menu_items as unknown as { name: string })?.name} ×{item.quantity}
@@ -113,13 +113,13 @@ export default function LookupPage() {
                     </span>
                   ))}
                 </div>
-                <div className="text-[11px] text-rodem-text-light mt-1">
+                <div className="text-[13px] text-rodem-text-light mt-1">
                   {order.order_payments?.map((p) => methodLabel[p.method] || p.method).join(' + ')}
                 </div>
               </div>
             ))}
             {orders.length === 0 && (
-              <div className="text-center py-8 text-rodem-text-sub text-sm">주문 이력이 없습니다</div>
+              <div className="text-center py-8 text-rodem-text-sub text-base">주문 이력이 없습니다</div>
             )}
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function LookupPage() {
   // Member list
   return (
     <div className="min-h-screen bg-rodem-bg font-sans">
-      <Header title="👀 외상 조회" onBack={() => router.push('/')} />
+      <Header title="👀 고객 내역확인" onBack={() => router.push('/')} />
       <div className="p-4">
         {loading ? (
           <div className="text-center py-12 text-rodem-text-sub">불러오는 중...</div>
@@ -141,14 +141,14 @@ export default function LookupPage() {
               placeholder="이름 검색..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setActiveChosung(null) }}
-              className="w-full p-3.5 rounded-rodem-sm border-2 border-rodem-border-light bg-rodem-card text-rodem-text text-base font-sans focus:outline-none focus:border-rodem-gold mb-3"
+              className="w-full p-3.5 rounded-rodem-sm border-2 border-rodem-border-light bg-rodem-card text-rodem-text text-lg font-sans focus:outline-none focus:border-rodem-gold mb-3"
             />
 
             <div className="flex flex-wrap gap-1 mb-4">
               <button
                 onClick={() => { setActiveChosung(null); setSearch('') }}
                 className={cn(
-                  'px-3 py-1.5 rounded-[10px] text-xs font-semibold cursor-pointer border',
+                  'px-3 py-1.5 rounded-[10px] text-sm font-semibold cursor-pointer border',
                   !activeChosung ? 'bg-rodem-gold text-white border-rodem-gold' : 'bg-rodem-card text-rodem-text-sub border-rodem-border-light'
                 )}
               >
@@ -159,7 +159,7 @@ export default function LookupPage() {
                   key={ch}
                   onClick={() => { setActiveChosung(ch); setSearch('') }}
                   className={cn(
-                    'px-3 py-1.5 rounded-[10px] text-xs font-semibold cursor-pointer border',
+                    'px-3 py-1.5 rounded-[10px] text-sm font-semibold cursor-pointer border',
                     activeChosung === ch ? 'bg-rodem-gold text-white border-rodem-gold' : 'bg-rodem-card text-rodem-text-sub border-rodem-border-light'
                   )}
                 >
@@ -182,9 +182,9 @@ export default function LookupPage() {
                       'hover:-translate-y-[2px] hover:shadow-md'
                     )}
                   >
-                    <div className="font-bold text-sm text-rodem-text">{member.name}</div>
+                    <div className="font-bold text-base text-rodem-text">{member.name}</div>
                     {hasCredit && (
-                      <div className="text-[11px] text-rodem-orange font-semibold mt-1">
+                      <div className="text-[13px] text-rodem-orange font-semibold mt-1">
                         외상 {formatPrice(member.credit_balance!)}
                       </div>
                     )}

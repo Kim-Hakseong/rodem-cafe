@@ -14,7 +14,7 @@ export default function StepIndicator({ steps, current }: StepIndicatorProps) {
         <div
           key={step}
           className={cn(
-            'flex-1 text-center py-1.5 text-xs border-b-[3px] transition-all duration-200',
+            'flex-1 text-center py-1.5 text-sm border-b-[3px] transition-all duration-200',
             i <= current
               ? 'font-bold text-rodem-gold border-rodem-gold'
               : 'font-medium text-rodem-text-light border-rodem-border-light'

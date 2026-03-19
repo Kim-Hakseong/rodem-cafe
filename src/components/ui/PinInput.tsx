@@ -84,7 +84,7 @@ export default function PinInput({
               'bg-gradient-to-b from-white to-[#f8f6f2]',
               'font-semibold cursor-pointer',
               'disabled:opacity-30 disabled:cursor-not-allowed',
-              k === 'clear' ? 'text-rodem-red text-[13px]' : k === 'del' ? 'text-[13px]' : 'text-[22px]',
+              k === 'clear' ? 'text-rodem-red text-[15px]' : k === 'del' ? 'text-[15px]' : 'text-[24px]',
               'text-rodem-text'
             )}
           >

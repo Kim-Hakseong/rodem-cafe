@@ -60,6 +60,7 @@ export type Database = {
       members: {
         Row: {
           created_at: string | null
+          department: string | null
           id: string
           name: string
           note: string | null
@@ -70,6 +71,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          department?: string | null
           id?: string
           name: string
           note?: string | null
@@ -80,6 +82,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          department?: string | null
           id?: string
           name?: string
           note?: string | null
@@ -153,18 +156,21 @@ export type Database = {
           id: string
           method: string
           order_id: string
+          transfer_status: string | null
         }
         Insert: {
           amount: number
           id?: string
           method: string
           order_id: string
+          transfer_status?: string | null
         }
         Update: {
           amount?: number
           id?: string
           method?: string
           order_id?: string
+          transfer_status?: string | null
         }
         Relationships: []
       }
@@ -232,10 +238,11 @@ export type Database = {
     Views: {
       member_balances: {
         Row: {
-          credit_balance: number | null
           id: string | null
           name: string | null
+          department: string | null
           prepaid_balance: number | null
+          credit_balance: number | null
         }
       }
     }
