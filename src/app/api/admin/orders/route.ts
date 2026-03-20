@@ -5,6 +5,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date')
+    const dateFrom = searchParams.get('dateFrom')
+    const dateTo = searchParams.get('dateTo')
     const memberName = searchParams.get('member')
 
     const supabase = createSupabaseAdmin()
@@ -13,9 +15,14 @@ export async function GET(request: NextRequest) {
       .from('orders')
       .select('id, order_number, status, total_price, created_at, completed_at, created_by, member_id, members(name), order_items(id, quantity, unit_price, menu_items(name)), order_payments(id, method, amount, transfer_status)')
       .order('created_at', { ascending: false })
-      .limit(50)
+      .limit(500)
 
-    if (date) {
+    if (dateFrom && dateTo) {
+      const start = new Date(dateFrom)
+      const end = new Date(dateTo)
+      end.setDate(end.getDate() + 1)
+      query = query.gte('created_at', start.toISOString()).lt('created_at', end.toISOString())
+    } else if (date) {
       const dayStart = new Date(date)
       const dayEnd = new Date(date)
       dayEnd.setDate(dayEnd.getDate() + 1)
