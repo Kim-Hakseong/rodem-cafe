@@ -73,7 +73,7 @@ export default function PinInput({
       </div>
 
       {/* Numpad */}
-      <div className="grid grid-cols-3 gap-2 max-w-[270px]">
+      <div className="grid grid-cols-3 gap-2 max-w-[270px] sm:max-w-[320px]">
         {keys.map((k) => (
           <button
             key={k}

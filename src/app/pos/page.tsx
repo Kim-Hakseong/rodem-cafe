@@ -13,6 +13,7 @@ import OrderConfirm from '@/components/pos/OrderConfirm'
 import TodaySummary from '@/components/pos/TodaySummary'
 import CreditManager from '@/components/pos/CreditManager'
 import OrderQueue from '@/components/pos/OrderQueue'
+import PrepaidAdjust from '@/components/pos/PrepaidAdjust'
 import { useRouter } from 'next/navigation'
 
 export type CartItem = {
@@ -59,6 +60,7 @@ function POSPageInner() {
   const [showCredit, setShowCredit] = useState(false)
   const [queueOpen, setQueueOpen] = useState(false)
   const [orderRefresh, setOrderRefresh] = useState(0)
+  const [showPrepaidAdjust, setShowPrepaidAdjust] = useState(false)
 
   // PIN states
   const [pinError, setPinError] = useState(false)
@@ -194,6 +196,7 @@ function POSPageInner() {
         onToggle={() => setQueueOpen(!queueOpen)}
         refreshTrigger={orderRefresh}
         mode={mode}
+        onPrepaidAdjust={() => setShowPrepaidAdjust(true)}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -263,6 +266,9 @@ function POSPageInner() {
       )}
       {!isCustomer && showCredit && (
         <CreditManager onClose={() => setShowCredit(false)} />
+      )}
+      {!isCustomer && showPrepaidAdjust && (
+        <PrepaidAdjust onClose={() => setShowPrepaidAdjust(false)} />
       )}
 
       <Toast

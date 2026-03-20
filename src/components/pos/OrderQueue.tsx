@@ -9,6 +9,7 @@ interface OrderQueueProps {
   onToggle: () => void
   refreshTrigger: number
   mode: 'staff' | 'customer'
+  onPrepaidAdjust?: () => void
 }
 
 type QueuePayment = {
@@ -30,9 +31,10 @@ type QueueOrder = {
   order_payments: QueuePayment[]
 }
 
-export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode }: OrderQueueProps) {
+export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onPrepaidAdjust }: OrderQueueProps) {
   const [orders, setOrders] = useState<QueueOrder[]>([])
   const [showCompleted, setShowCompleted] = useState(true)
+  const [showCancelled, setShowCancelled] = useState(false)
   const isStaff = mode === 'staff'
 
   const fetchOrders = useCallback(async () => {
@@ -70,6 +72,18 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode }: O
     } catch { /* silent */ }
   }
 
+  const handleCancel = async (orderId: string) => {
+    if (!confirm('이 주문을 반려하시겠습니까?\n선불 결제분은 자동으로 환불됩니다.')) return
+    try {
+      const res = await fetch('/api/orders/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      })
+      if (res.ok) fetchOrders()
+    } catch { /* silent */ }
+  }
+
   const handleTransferAction = async (paymentId: string, action: 'confirmed' | 'unpaid') => {
     try {
       const res = await fetch('/api/orders/transfer-confirm', {
@@ -83,6 +97,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode }: O
 
   const pendingOrders = orders.filter((o) => o.status === 'pending')
   const completedOrders = orders.filter((o) => o.status === 'completed')
+  const cancelledOrders = orders.filter((o) => o.status === 'cancelled')
   const pendingCount = pendingOrders.length
 
   // Collapsed tab
@@ -106,7 +121,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode }: O
   }
 
   return (
-    <div className="w-[340px] flex-shrink-0 bg-rodem-card border-r border-rodem-border-light flex flex-col h-full">
+    <div className="w-[280px] sm:w-[320px] lg:w-[340px] flex-shrink-0 bg-rodem-card border-r border-rodem-border-light flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-3.5 bg-gradient-to-br from-[#4a4541] to-[#3a3632] text-white">
         <div>
@@ -115,9 +130,19 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode }: O
             대기 {pendingCount}건 · 완료 {completedOrders.length}건
           </div>
         </div>
-        <button onClick={onToggle} className="bg-white/10 border-none text-white w-8 h-8 rounded-lg text-base cursor-pointer">
-          ✕
-        </button>
+        <div className="flex gap-1.5 items-center">
+          {isStaff && onPrepaidAdjust && (
+            <button
+              onClick={onPrepaidAdjust}
+              className="bg-white/10 border-none text-white px-2 h-8 rounded-lg text-sm cursor-pointer"
+            >
+              💰 잔액
+            </button>
+          )}
+          <button onClick={onToggle} className="bg-white/10 border-none text-white w-8 h-8 rounded-lg text-base cursor-pointer">
+            ✕
+          </button>
+        </div>
       </div>
 
       {/* Orders list */}
@@ -143,7 +168,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode }: O
               <div className="text-base text-rodem-text-sub mb-1.5">
                 {order.order_items?.map((item, i) => (
                   <span key={i}>
-                    {(item.menu_items as unknown as { name: string })?.name} ×{item.quantity}
+                    {(item.menu_items as unknown as { name: string })?.name} x{item.quantity}
                     {i < order.order_items.length - 1 ? ', ' : ''}
                   </span>
                 ))}
@@ -178,12 +203,20 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode }: O
                       </button>
                     </div>
                   )}
-                  <button
-                    onClick={() => handleComplete(order.id)}
-                    className="w-full py-2 rounded-[8px] bg-rodem-green-light border border-rodem-green text-rodem-green text-base font-bold cursor-pointer"
-                  >
-                    완료 처리
-                  </button>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => handleComplete(order.id)}
+                      className="flex-1 py-2 rounded-[8px] bg-rodem-green-light border border-rodem-green text-rodem-green text-base font-bold cursor-pointer"
+                    >
+                      완료 처리
+                    </button>
+                    <button
+                      onClick={() => handleCancel(order.id)}
+                      className="flex-1 py-2 rounded-[8px] bg-red-50 border border-rodem-red text-rodem-red text-base font-bold cursor-pointer"
+                    >
+                      주문 반려
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -208,6 +241,31 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode }: O
             <div className="flex items-center justify-between mb-1">
               <span className="text-base font-bold text-rodem-text">#{order.order_number}</span>
               <span className="text-base px-2.5 py-0.5 rounded-full bg-rodem-green-light text-rodem-green font-bold">완료</span>
+            </div>
+            <div className="text-base text-rodem-text-sub">
+              {(order.members as unknown as { name: string })?.name} · {new Date(order.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
+        ))}
+
+        {/* Toggle cancelled */}
+        {cancelledOrders.length > 0 && (
+          <button
+            onClick={() => setShowCancelled(!showCancelled)}
+            className="w-full py-2 text-base text-rodem-text-sub bg-transparent border-none cursor-pointer"
+          >
+            {showCancelled ? '▼ 반려 주문 숨기기' : `▶ 반려 주문 보기 (${cancelledOrders.length}건)`}
+          </button>
+        )}
+
+        {/* Cancelled orders */}
+        {showCancelled && cancelledOrders.map((order) => (
+          <div key={order.id} className={cn(
+            'bg-white rounded-rodem-sm p-3.5 border-l-4 border-l-rodem-red border border-rodem-border-light opacity-50'
+          )}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-base font-bold text-rodem-text">#{order.order_number}</span>
+              <span className="text-base px-2.5 py-0.5 rounded-full bg-red-50 text-rodem-red font-bold">반려</span>
             </div>
             <div className="text-base text-rodem-text-sub">
               {(order.members as unknown as { name: string })?.name} · {new Date(order.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}

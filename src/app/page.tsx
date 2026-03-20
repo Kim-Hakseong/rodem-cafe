@@ -19,7 +19,7 @@ export default function Home() {
       </div>
 
       {/* Mode buttons */}
-      <div className="flex flex-col gap-3.5 w-full max-w-[360px] relative z-10">
+      <div className="flex flex-col gap-3.5 w-full max-w-[360px] sm:max-w-[500px] relative z-10">
         <button
           onClick={() => router.push('/pos?mode=customer')}
           className="p-7 rounded-rodem border-none bg-gradient-to-br from-[#6ab07e] to-[#4a9060] text-white cursor-pointer text-[22px] font-bold flex items-center gap-4 shadow-[0_6px_24px_rgba(90,154,110,0.25),0_1px_0_rgba(255,255,255,0.25)_inset] hover:-translate-y-[3px] transition-transform duration-300"
@@ -55,7 +55,7 @@ export default function Home() {
       </div>
 
       {/* Admin links */}
-      <div className="grid grid-cols-4 gap-2 w-full max-w-[360px] mt-8 relative z-10">
+      <div className="grid grid-cols-4 gap-2 w-full max-w-[360px] sm:max-w-[500px] mt-8 relative z-10">
         {[
           { href: '/prepaid', icon: '💰', label: '선불충전' },
           { href: '/dashboard', icon: '📊', label: '정산' },
@@ -73,12 +73,20 @@ export default function Home() {
         ))}
       </div>
 
-      <button
-        onClick={() => router.push('/settings')}
-        className="mt-4 text-sm text-rodem-text-light cursor-pointer bg-transparent border-none relative z-10 underline underline-offset-2"
-      >
-        ⚙️ PIN 설정
-      </button>
+      <div className="flex gap-3 mt-4 relative z-10">
+        <button
+          onClick={() => router.push('/settings')}
+          className="text-sm text-rodem-text-light cursor-pointer bg-transparent border-none underline underline-offset-2"
+        >
+          ⚙️ PIN 설정
+        </button>
+        <button
+          onClick={() => router.push('/admin')}
+          className="text-sm text-rodem-text-light cursor-pointer bg-transparent border-none underline underline-offset-2"
+        >
+          🔐 관리자
+        </button>
+      </div>
     </div>
   )
 }
