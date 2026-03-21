@@ -20,6 +20,7 @@ type MenuItem = {
   price: number
   category: string
   temp_type: string | null
+  image_url: string | null
 }
 
 const EMOJI_MAP: Record<string, string> = {
@@ -36,7 +37,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
       const supabase = createSupabaseBrowser()
       const { data } = await supabase
         .from('menu_items')
-        .select('id, name, price, category, temp_type')
+        .select('id, name, price, category, temp_type, image_url')
         .eq('is_active', true)
         .order('sort_order')
       if (data) setMenus(data)
@@ -106,40 +107,66 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
             const qty = getCartQty(item.id)
             const emoji = EMOJI_MAP[item.category] || '📦'
             return (
-              <button
+              <div
                 key={item.id}
-                onClick={() => addToCart(item)}
+                onClick={() => { if (qty === 0) addToCart(item) }}
                 className={cn(
-                  'relative p-4 rounded-rodem-sm border text-left cursor-pointer transition-all duration-200',
+                  'relative p-5 rounded-rodem-sm border text-left transition-all duration-200',
                   'bg-gradient-to-br from-[#fefcf9] to-[#f8f4ec]',
                   qty > 0 ? 'border-rodem-gold shadow-[0_0_0_2px_rgba(201,162,39,0.2)]' : 'border-rodem-border-light',
-                  'hover:-translate-y-[2px] hover:shadow-md'
+                  qty === 0 ? 'cursor-pointer hover:-translate-y-[2px] hover:shadow-md' : ''
                 )}
               >
-                {qty > 0 && (
-                  <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rodem-gold text-white text-sm font-bold flex items-center justify-center shadow-md">
-                    {qty}
+                {/* 이미지 or 이모지 — 2배 크기 */}
+                {item.image_url ? (
+                  <img
+                    src={item.image_url}
+                    alt={item.name}
+                    className="w-16 h-16 object-cover rounded-lg mb-2"
+                  />
+                ) : (
+                  <div className="text-[52px] mb-2">{emoji}</div>
+                )}
+
+                {/* 메뉴명 — 2배 크기 */}
+                <div className="font-bold text-[28px] text-rodem-text leading-tight">{item.name}</div>
+
+                {/* 가격 or 수량 조절 */}
+                {qty === 0 ? (
+                  <div className="text-xl text-rodem-text-sub mt-1">{formatPrice(item.price)}</div>
+                ) : (
+                  <div className="flex items-center justify-center gap-4 mt-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeFromCart(item.id) }}
+                      className="w-10 h-10 rounded-full bg-rodem-border-light text-rodem-text text-xl font-bold flex items-center justify-center cursor-pointer border-none active:bg-rodem-border"
+                    >
+                      -
+                    </button>
+                    <span className="text-2xl font-bold text-rodem-gold min-w-[2ch] text-center">{qty}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); addToCart(item) }}
+                      className="w-10 h-10 rounded-full bg-rodem-gold text-white text-xl font-bold flex items-center justify-center cursor-pointer border-none active:bg-rodem-gold/80"
+                    >
+                      +
+                    </button>
                   </div>
                 )}
-                <div className="text-[26px] mb-1">{emoji}</div>
-                <div className="font-bold text-base text-rodem-text">{item.name}</div>
-                <div className="text-sm text-rodem-text-sub mt-1">{formatPrice(item.price)}</div>
-              </button>
+              </div>
             )
           })}
         </div>
       </div>
 
-      {/* Cart bar */}
+      {/* Cart bar — 높이 확대 */}
       {cart.length > 0 && (
-        <div className="border-t border-rodem-border-light bg-white p-4 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
-          <div className="flex flex-wrap gap-2 mb-3">
+        <div className="border-t border-rodem-border-light bg-white p-5 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
+          <div className="flex flex-wrap gap-2 mb-4">
             {cart.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-1.5 bg-rodem-gold-light px-3 py-1.5 rounded-full text-base"
+                className="flex items-center gap-1.5 bg-rodem-gold-light px-3 py-2 rounded-full text-base"
               >
-                <span className="font-semibold text-rodem-text">{item.name} ×{item.qty}</span>
+                <span className="font-semibold text-rodem-text">{item.name} x{item.qty}</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); removeFromCart(item.id) }}
                   className="text-rodem-text-sub hover:text-rodem-red text-sm cursor-pointer bg-transparent border-none"
@@ -150,19 +177,19 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
             ))}
           </div>
           <div className="flex items-center justify-between">
-            <div className="text-xl font-bold text-rodem-text">
+            <div className="text-2xl font-bold text-rodem-text">
               합계 {formatPrice(cartTotal)}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={onBack}
-                className="px-4 py-2.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base"
+                className="px-4 py-3.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base"
               >
                 ← 이전
               </button>
               <button
                 onClick={onNext}
-                className="px-6 py-2.5 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold cursor-pointer text-base shadow-[0_4px_16px_rgba(201,162,39,0.2)]"
+                className="px-6 py-3.5 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold cursor-pointer text-base shadow-[0_4px_16px_rgba(201,162,39,0.2)]"
               >
                 다음 →
               </button>
@@ -172,10 +199,10 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
       )}
 
       {cart.length === 0 && (
-        <div className="border-t border-rodem-border-light bg-white p-4">
+        <div className="border-t border-rodem-border-light bg-white p-5">
           <button
             onClick={onBack}
-            className="px-4 py-2.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base"
+            className="px-4 py-3.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base"
           >
             ← 이전
           </button>

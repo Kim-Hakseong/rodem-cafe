@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
         category: body.category,
         temp_type: body.temp_type || null,
         sort_order: body.sort_order || 0,
+        image_url: body.image_url || null,
       })
       .select()
       .single()
@@ -37,6 +38,7 @@ export async function PUT(request: NextRequest) {
         temp_type: body.temp_type || null,
         sort_order: body.sort_order || 0,
         is_active: body.is_active,
+        image_url: body.image_url || null,
       })
       .eq('id', body.id)
 

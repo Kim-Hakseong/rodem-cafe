@@ -171,9 +171,15 @@ function POSPageInner() {
     )
   }
 
-  // Header right buttons — staff only (정산, 외상)
+  // Header right buttons — staff only (정산, 외상, 고객)
   const headerRight = isCustomer ? undefined : (
     <div className="flex gap-1.5">
+      <button
+        onClick={() => router.push('/lookup?from=staff')}
+        className="bg-white/10 border-none text-white py-1.5 px-3 rounded-lg text-base font-semibold cursor-pointer"
+      >
+        👀 고객
+      </button>
       <button
         onClick={() => setShowSummary(true)}
         className="bg-white/10 border-none text-white py-1.5 px-3 rounded-lg text-base font-semibold cursor-pointer"
@@ -203,7 +209,9 @@ function POSPageInner() {
         <Header
           title={isCustomer ? '🛒 주문 하기' : '📋 봉사자 페이지'}
           onBack={() => {
-            if (isCustomer) {
+            if (step > 0) {
+              setStep(step - 1)
+            } else if (isCustomer) {
               router.push('/')
             } else {
               setAuthenticated(false)

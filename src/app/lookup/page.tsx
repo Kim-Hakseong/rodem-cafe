@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useMemo, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase/client'
 import { CHOSUNG_LIST } from '@/lib/constants'
 import { getFirstChosung, cn, formatPrice } from '@/lib/utils'
@@ -12,6 +12,7 @@ type MemberBalance = {
   name: string
   credit_balance: number
   prepaid_balance: number
+  qr_token: string | null
 }
 
 type OrderHistory = {
@@ -23,7 +24,18 @@ type OrderHistory = {
 }
 
 export default function LookupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-rodem-bg font-sans text-rodem-text-sub">불러오는 중...</div>}>
+      <LookupPageInner />
+    </Suspense>
+  )
+}
+
+function LookupPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromStaff = searchParams.get('from') === 'staff'
+
   const [members, setMembers] = useState<MemberBalance[]>([])
   const [search, setSearch] = useState('')
   const [activeChosung, setActiveChosung] = useState<string | null>(null)
@@ -34,15 +46,28 @@ export default function LookupPage() {
   useEffect(() => {
     const fetchMembers = async () => {
       const supabase = createSupabaseBrowser()
-      const { data } = await supabase
+      // member_balances view + qr_token from members
+      const { data: balances } = await supabase
         .from('member_balances')
         .select('id, name, credit_balance, prepaid_balance')
         .order('name')
-      if (data) setMembers(data as MemberBalance[])
+
+      if (balances) {
+        // QR token은 메인에서 접근할 때만 필요
+        if (!fromStaff) {
+          const { data: membersData } = await supabase
+            .from('members')
+            .select('id, qr_token')
+          const tokenMap = new Map(membersData?.map((m) => [m.id, m.qr_token]) || [])
+          setMembers(balances.map((b) => ({ ...b, qr_token: tokenMap.get(b.id!) || null })) as MemberBalance[])
+        } else {
+          setMembers(balances.map((b) => ({ ...b, qr_token: null })) as MemberBalance[])
+        }
+      }
       setLoading(false)
     }
     fetchMembers()
-  }, [])
+  }, [fromStaff])
 
   const fetchOrders = async (memberId: string) => {
     const supabase = createSupabaseBrowser()
@@ -65,15 +90,19 @@ export default function LookupPage() {
 
   const handleSelectMember = (member: MemberBalance) => {
     setSelectedMember(member)
-    fetchOrders(member.id!)
+    if (fromStaff) {
+      fetchOrders(member.id!)
+    }
   }
 
   const methodLabel: Record<string, string> = {
     cash: '현금', transfer: '이체', credit: '외상', prepaid: '선불',
   }
 
-  // Detail view
-  if (selectedMember) {
+  const backPath = fromStaff ? '/pos' : '/'
+
+  // Detail view — from=staff: 잔액 + 주문이력
+  if (selectedMember && fromStaff) {
     return (
       <div className="min-h-screen bg-rodem-bg font-sans">
         <Header title={`${selectedMember.name} 님`} onBack={() => setSelectedMember(null)} />
@@ -81,13 +110,13 @@ export default function LookupPage() {
           {/* Balance cards */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="p-4 rounded-rodem-sm bg-rodem-orange-light border border-rodem-orange/20">
-              <div className="text-sm text-rodem-orange mb-1">📋 외상 잔액</div>
+              <div className="text-sm text-rodem-orange mb-1">외상 잔액</div>
               <div className="text-[22px] font-bold text-rodem-orange">
                 {formatPrice(selectedMember.credit_balance ?? 0)}
               </div>
             </div>
             <div className="p-4 rounded-rodem-sm bg-rodem-purple-light border border-rodem-purple/20">
-              <div className="text-sm text-rodem-purple mb-1">💰 선불 잔액</div>
+              <div className="text-sm text-rodem-purple mb-1">선불 잔액</div>
               <div className="text-[22px] font-bold text-rodem-purple">
                 {formatPrice(selectedMember.prepaid_balance ?? 0)}
               </div>
@@ -108,7 +137,7 @@ export default function LookupPage() {
                 <div className="text-sm text-rodem-text-sub">
                   {order.order_items?.map((item, i) => (
                     <span key={i}>
-                      {(item.menu_items as unknown as { name: string })?.name} ×{item.quantity}
+                      {(item.menu_items as unknown as { name: string })?.name} x{item.quantity}
                       {i < order.order_items.length - 1 ? ', ' : ''}
                     </span>
                   ))}
@@ -127,10 +156,44 @@ export default function LookupPage() {
     )
   }
 
+  // Detail view — from main: QR 코드 표시
+  if (selectedMember && !fromStaff) {
+    return (
+      <div className="min-h-screen bg-rodem-bg font-sans">
+        <Header title={`${selectedMember.name} 님`} onBack={() => setSelectedMember(null)} />
+        <div className="p-4 flex flex-col items-center">
+          <div className="text-center mt-8">
+            <div className="text-[48px] mb-4">🌿</div>
+            <h2 className="text-[24px] font-bold text-rodem-text mb-2">{selectedMember.name}</h2>
+            <p className="text-base text-rodem-text-sub mb-6">개인 QR 코드</p>
+          </div>
+          {selectedMember.qr_token ? (
+            <div className="bg-white p-6 rounded-rodem-sm shadow-md border border-rodem-border-light">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/qr/generate?memberId=${selectedMember.id}`}
+                alt={`${selectedMember.name} QR`}
+                className="w-48 h-48"
+              />
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-3">🔗</div>
+              <p className="text-rodem-text-sub text-base">QR 코드가 생성되지 않았습니다</p>
+            </div>
+          )}
+          <p className="text-sm text-rodem-text-sub mt-4 text-center">
+            이 QR을 스캔하면 개인 페이지에서<br />잔액과 주문이력을 확인할 수 있습니다
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   // Member list
   return (
     <div className="min-h-screen bg-rodem-bg font-sans">
-      <Header title="👀 고객 내역확인" onBack={() => router.push('/')} />
+      <Header title="👀 고객 내역확인" onBack={() => router.push(backPath)} />
       <div className="p-4">
         {loading ? (
           <div className="text-center py-12 text-rodem-text-sub">불러오는 중...</div>

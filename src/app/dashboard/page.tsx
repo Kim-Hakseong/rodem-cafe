@@ -9,6 +9,7 @@ import PinInput from '@/components/ui/PinInput'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts'
+import type { PieLabelRenderProps } from 'recharts'
 import * as XLSX from 'xlsx'
 
 type OrderData = {
@@ -291,7 +292,7 @@ export default function DashboardPage() {
             <div className="h-64 mb-6">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={customerStats.slice(0, 10)} layout="vertical">
-                  <XAxis type="number" tickFormatter={(v) => `${(v/1000).toFixed(0)}K`} />
+                  <XAxis type="number" tickFormatter={(v) => v >= 10000 ? `${Math.round(v / 10000)}만원` : formatPrice(v)} />
                   <YAxis type="category" dataKey="name" width={60} tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(v) => formatPrice(Number(v))} />
                   <Bar dataKey="total" fill="#c9a227" radius={[0, 6, 6, 0]} />
@@ -373,7 +374,7 @@ export default function DashboardPage() {
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={60} label={({ name }) => name}>
+                      <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={60} label={(props: PieLabelRenderProps) => `${props.name || ''} ${(((props.percent as number) ?? 0) * 100).toFixed(0)}%`}>
                         {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
                       </Pie>
                       <Tooltip formatter={(v) => formatPrice(Number(v))} />
@@ -387,7 +388,7 @@ export default function DashboardPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={barData}>
                       <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                      <YAxis tickFormatter={(v) => `${(v/1000).toFixed(0)}K`} tick={{ fontSize: 10 }} />
+                      <YAxis tickFormatter={(v) => v >= 10000 ? `${Math.round(v / 10000)}만원` : formatPrice(v)} tick={{ fontSize: 10 }} />
                       <Tooltip formatter={(v) => formatPrice(Number(v))} />
                       <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                         {barData.map((d, i) => <Cell key={i} fill={d.fill} />)}
@@ -406,7 +407,7 @@ export default function DashboardPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={lineData}>
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                      <YAxis tickFormatter={(v) => `${(v/1000).toFixed(0)}K`} tick={{ fontSize: 10 }} />
+                      <YAxis tickFormatter={(v) => v >= 10000 ? `${Math.round(v / 10000)}만원` : formatPrice(v)} tick={{ fontSize: 10 }} />
                       <Tooltip formatter={(v) => formatPrice(Number(v))} />
                       <Line type="monotone" dataKey="total" stroke="#c9a227" strokeWidth={2} dot={{ fill: '#c9a227', r: 3 }} />
                     </LineChart>

@@ -12,11 +12,11 @@ import Toast from '@/components/ui/Toast'
 
 type TempType = 'HOT' | 'ICE' | null
 type Category = Exclude<typeof CATEGORIES[number], '전체'>
-type MenuItem = { id: string; name: string; price: number; category: Category; temp_type: TempType; sort_order: number; is_active: boolean }
-type FormState = { name: string; price: string; category: Category; temp_type: TempType; sort_order: string }
+type MenuItem = { id: string; name: string; price: number; category: Category; temp_type: TempType; sort_order: number; is_active: boolean; image_url: string | null }
+type FormState = { name: string; price: string; category: Category; temp_type: TempType; sort_order: string; image_url: string }
 
 const MENU_CATS = CATEGORIES.filter((c) => c !== '전체') as Category[]
-const DEFAULT_FORM: FormState = { name: '', price: '', category: '커피', temp_type: null, sort_order: '0' }
+const DEFAULT_FORM: FormState = { name: '', price: '', category: '커피', temp_type: null, sort_order: '0', image_url: '' }
 const TEMP_BADGE: Record<NonNullable<TempType>, string> = { HOT: 'bg-red-100 text-red-600', ICE: 'bg-blue-100 text-blue-600' }
 
 export default function MenuPage() {
@@ -39,7 +39,7 @@ export default function MenuPage() {
   const fetchItems = useCallback(async () => {
     const { data } = await createSupabaseBrowser()
       .from('menu_items')
-      .select('id, name, price, category, temp_type, sort_order, is_active')
+      .select('id, name, price, category, temp_type, sort_order, is_active, image_url')
       .order('category').order('sort_order')
     if (data) setItems(data as MenuItem[])
     setLoading(false)
@@ -59,7 +59,7 @@ export default function MenuPage() {
   const openAdd = () => { setEditTarget(null); setForm({ ...DEFAULT_FORM, category: activeCategory }); setModalOpen(true) }
   const openEdit = (item: MenuItem) => {
     setEditTarget(item)
-    setForm({ name: item.name, price: String(item.price), category: item.category, temp_type: item.temp_type, sort_order: String(item.sort_order) })
+    setForm({ name: item.name, price: String(item.price), category: item.category, temp_type: item.temp_type, sort_order: String(item.sort_order), image_url: item.image_url || '' })
     setModalOpen(true)
   }
   const closeModal = () => { setModalOpen(false); setEditTarget(null); setForm(DEFAULT_FORM) }
@@ -68,7 +68,7 @@ export default function MenuPage() {
     if (!form.name.trim() || !form.price) return
     setSubmitting(true)
     try {
-      const payload = { name: form.name.trim(), price: Number(form.price), category: form.category, temp_type: form.temp_type, sort_order: Number(form.sort_order) || 0, ...(editTarget ? { id: editTarget.id, is_active: editTarget.is_active } : {}) }
+      const payload = { name: form.name.trim(), price: Number(form.price), category: form.category, temp_type: form.temp_type, sort_order: Number(form.sort_order) || 0, image_url: form.image_url.trim() || null, ...(editTarget ? { id: editTarget.id, is_active: editTarget.is_active } : {}) }
       const res = await fetch('/api/menu', { method: editTarget ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       if (res.ok) { showToast(editTarget ? '메뉴가 수정되었습니다' : '메뉴가 추가되었습니다', 'success'); closeModal(); fetchItems() }
       else showToast('저장 실패', 'error')
@@ -235,6 +235,18 @@ export default function MenuPage() {
             <label className="block text-sm font-bold text-rodem-text-sub mb-1.5">정렬 순서</label>
             <input type="number" value={form.sort_order} onChange={(e) => setField('sort_order', e.target.value)}
               className="w-full p-3 rounded-rodem-sm border-2 border-rodem-border-light bg-rodem-bg text-rodem-text text-base font-sans focus:outline-none focus:border-rodem-gold" />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-rodem-text-sub mb-1.5">이미지 URL (선택)</label>
+            <input type="url" value={form.image_url} onChange={(e) => setField('image_url', e.target.value)} placeholder="https://example.com/image.jpg"
+              className="w-full p-3 rounded-rodem-sm border-2 border-rodem-border-light bg-rodem-bg text-rodem-text text-base font-sans focus:outline-none focus:border-rodem-gold" />
+            {form.image_url && (
+              <div className="mt-2 flex items-center gap-2">
+                <img src={form.image_url} alt="미리보기" className="w-12 h-12 object-cover rounded-lg border border-rodem-border-light"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                <span className="text-sm text-rodem-text-sub">미리보기</span>
+              </div>
+            )}
           </div>
           <div className="flex gap-2 pt-2">
             <button onClick={closeModal} className="flex-1 py-3 rounded-rodem-sm border border-rodem-border-light bg-rodem-card text-rodem-text-sub font-bold text-base cursor-pointer">취소</button>

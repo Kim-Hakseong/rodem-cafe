@@ -13,7 +13,8 @@ export default function Home() {
 
       {/* Logo */}
       <div className="text-center mb-12 relative z-10">
-        <div className="text-[58px] mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.06)]">🌿</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icon-512.png" alt="로뎀나무 카페" className="w-28 h-28 mx-auto mb-3 drop-shadow-[0_4px_12px_rgba(0,0,0,0.08)]" />
         <h1 className="text-[34px] font-extrabold text-rodem-gold tracking-tight mb-2">로뎀나무</h1>
         <p className="text-lg text-rodem-text-sub font-medium">청주남부교회 카페</p>
       </div>

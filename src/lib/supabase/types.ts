@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           admin_pin_hash: string
           id: string
+          qr_enabled: boolean | null
           recovery_email: string
           staff_pin_hash: string
           updated_at: string | null
@@ -20,6 +21,7 @@ export type Database = {
         Insert: {
           admin_pin_hash: string
           id?: string
+          qr_enabled?: boolean | null
           recovery_email: string
           staff_pin_hash: string
           updated_at?: string | null
@@ -27,6 +29,7 @@ export type Database = {
         Update: {
           admin_pin_hash?: string
           id?: string
+          qr_enabled?: boolean | null
           recovery_email?: string
           staff_pin_hash?: string
           updated_at?: string | null
@@ -98,6 +101,7 @@ export type Database = {
           category: string
           created_at: string | null
           id: string
+          image_url: string | null
           is_active: boolean | null
           name: string
           price: number
@@ -108,6 +112,7 @@ export type Database = {
           category: string
           created_at?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           name: string
           price: number
@@ -118,6 +123,7 @@ export type Database = {
           category?: string
           created_at?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           name?: string
           price?: number

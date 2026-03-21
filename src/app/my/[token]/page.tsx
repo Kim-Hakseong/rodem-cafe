@@ -30,10 +30,24 @@ export default function MyPage() {
   const [notFound, setNotFound] = useState(false)
   const [hasPin, setHasPin] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [qrDisabled, setQrDisabled] = useState(false)
 
   useEffect(() => {
-    const fetchMember = async () => {
+    const fetchData = async () => {
       const supabase = createSupabaseBrowser()
+
+      // QR 기능 활성화 여부 확인
+      const { data: settings } = await supabase
+        .from('admin_settings')
+        .select('qr_enabled')
+        .single()
+
+      if (settings && settings.qr_enabled === false) {
+        setQrDisabled(true)
+        setLoading(false)
+        return
+      }
+
       const { data } = await supabase
         .from('members')
         .select('id, name, prepaid_balance, personal_pin')
@@ -42,7 +56,6 @@ export default function MyPage() {
 
       if (data) {
         setHasPin(!!data.personal_pin)
-        // Fetch balance from view
         const { data: balance } = await supabase
           .from('member_balances')
           .select('credit_balance, prepaid_balance')
@@ -55,14 +68,13 @@ export default function MyPage() {
           prepaid_balance: balance?.prepaid_balance ?? 0,
           credit_balance: balance?.credit_balance ?? 0,
         })
-        // If no PIN set, skip authentication
         if (!data.personal_pin) setAuthenticated(true)
       } else {
         setNotFound(true)
       }
       setLoading(false)
     }
-    fetchMember()
+    fetchData()
   }, [token])
 
   useEffect(() => {
@@ -92,9 +104,22 @@ export default function MyPage() {
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-rodem-bg font-sans"><div className="text-rodem-text-sub">불러오는 중...</div></div>
+
+  // QR 기능 비활성화
+  if (qrDisabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-rodem-bg font-sans">
+        <div className="text-center p-6">
+          <div className="text-4xl mb-4">🔒</div>
+          <div className="text-xl font-bold text-rodem-text mb-2">QR 기능이 비활성화되었습니다</div>
+          <div className="text-base text-rodem-text-sub">관리자가 QR 기능을 일시 중지했습니다</div>
+        </div>
+      </div>
+    )
+  }
+
   if (notFound) return <div className="min-h-screen flex items-center justify-center bg-rodem-bg font-sans"><div className="text-center"><div className="text-4xl mb-4">🔍</div><div className="text-rodem-text font-bold">찾을 수 없습니다</div><div className="text-base text-rodem-text-sub mt-2">유효하지 않은 QR코드입니다</div></div></div>
 
-  // PIN auth for personal page
   if (!authenticated && hasPin) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#efebe4] via-[#e5e0d8] to-[#dedad2] font-sans">
@@ -118,11 +143,11 @@ export default function MyPage() {
       <div className="p-4">
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="p-4 rounded-rodem-sm bg-rodem-orange-light border border-rodem-orange/20">
-            <div className="text-sm text-rodem-orange mb-1">📋 외상</div>
+            <div className="text-sm text-rodem-orange mb-1">외상</div>
             <div className="text-[22px] font-bold text-rodem-orange">{formatPrice(member?.credit_balance ?? 0)}</div>
           </div>
           <div className="p-4 rounded-rodem-sm bg-rodem-purple-light border border-rodem-purple/20">
-            <div className="text-sm text-rodem-purple mb-1">💰 선불</div>
+            <div className="text-sm text-rodem-purple mb-1">선불</div>
             <div className="text-[22px] font-bold text-rodem-purple">{formatPrice(member?.prepaid_balance ?? 0)}</div>
           </div>
         </div>
