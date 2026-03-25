@@ -43,3 +43,14 @@ export function getTodayStart(): string {
 export function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(' ')
 }
+
+// TTS 음성 안내
+export function speak(text: string) {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return
+  window.speechSynthesis.cancel()
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = 'ko-KR'
+  utterance.rate = 0.95
+  utterance.pitch = 1
+  window.speechSynthesis.speak(utterance)
+}

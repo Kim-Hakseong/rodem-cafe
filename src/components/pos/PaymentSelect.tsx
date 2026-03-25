@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PAYMENT_METHODS, BANK_ACCOUNT } from '@/lib/constants'
 import { cn, formatPrice } from '@/lib/utils'
 import type { SelectedMember, PaymentInfo } from '@/app/pos/page'
+import QRCode from 'qrcode'
 
 interface PaymentSelectProps {
   member: SelectedMember
@@ -16,7 +17,20 @@ interface PaymentSelectProps {
 export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mode }: PaymentSelectProps) {
   const [showTransferInfo, setShowTransferInfo] = useState(false)
   const [showPrepaidShortage, setShowPrepaidShortage] = useState(false)
+  const [transferQrUrl, setTransferQrUrl] = useState('')
   const shortage = cartTotal - member.prepaid_balance
+
+  // 계좌이체 QR 생성
+  useEffect(() => {
+    if (showTransferInfo) {
+      const text = `${BANK_ACCOUNT.bank} ${BANK_ACCOUNT.number}`
+      QRCode.toDataURL(text, {
+        width: 200,
+        margin: 2,
+        color: { dark: '#4a4541', light: '#ffffff' },
+      }).then(setTransferQrUrl)
+    }
+  }, [showTransferInfo])
 
   const handlePayment = (methodId: string) => {
     if (methodId === 'transfer') {
@@ -103,6 +117,18 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
               <div className="text-[22px] font-bold text-rodem-blue">{BANK_ACCOUNT.number}</div>
               <div className="text-sm text-rodem-text-sub mt-1">{BANK_ACCOUNT.holder}</div>
             </div>
+
+            {/* QR 코드 — 스캔 시 계좌번호 텍스트 복사 */}
+            {transferQrUrl && (
+              <div className="flex flex-col items-center mb-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={transferQrUrl} alt="계좌이체 QR" className="w-48 h-48 rounded-lg border border-rodem-border-light" />
+                <p className="text-sm text-rodem-text-sub mt-2 text-center">
+                  QR을 스캔하면 계좌번호가 복사됩니다
+                </p>
+              </div>
+            )}
+
             <div className="text-center mb-4">
               <div className="text-base text-rodem-text-sub">입금 금액</div>
               <div className="text-[22px] font-bold text-rodem-text">{formatPrice(cartTotal)}</div>

@@ -327,4 +327,27 @@
   - `layout.tsx`에 `<link rel="icon">` 추가
   - sharp 패키지로 SVG→PNG 변환 후 devDependency 제거
 - **이슈:** SVG 렌더러에 한글 폰트 없음 → 영문 "CAFE" 텍스트로 대체
+- **다음:** Phase 8.8
+
+## Phase 8.8 — 음성 알림(TTS) + 계좌이체 QR 코드
+- **상태:** ✅ 완료
+- **완료일:** 2026-03-25
+- **산출물:**
+  - **TTS 음성 알림**: Web Speech API 기반 `speak()` 유틸 함수 추가
+    - 주문 접수 시: "{이름}님 {메뉴} {수량}잔 주문이 접수되었습니다"
+    - 완료 처리 시: "{이름}님 {메뉴} {수량}잔 음료 나왔습니다"
+    - 한국어(ko-KR), rate 0.95, pitch 1
+  - **CartItem temp_type 추가**: TTS에서 "아메리카노 Hot" 처럼 온도 정보 포함
+  - **계좌이체 QR 코드**: 결제 팝업에 QR 코드 표시 (200x200px)
+    - `qrcode` 패키지 toDataURL 사용 (클라이언트 생성)
+    - QR 내용: "농협 351-1512-0013-03" (스캔 시 텍스트 복사)
+    - 계좌정보 박스 아래, 입금금액 위에 배치
+- **변경 파일:**
+  - `src/lib/utils.ts` — speak() 함수 추가
+  - `src/app/pos/page.tsx` — CartItem에 temp_type 추가
+  - `src/components/pos/MenuSelect.tsx` — addToCart 시 temp_type 포함
+  - `src/components/pos/OrderConfirm.tsx` — 주문 접수 TTS
+  - `src/components/pos/OrderQueue.tsx` — 완료 처리 TTS
+  - `src/components/pos/PaymentSelect.tsx` — 계좌이체 QR 코드
+- **이슈:** 없음. 신규 패키지 불필요 (Web Speech API 브라우저 내장, qrcode 이미 설치)
 - **다음:** 베타 운영 계속

@@ -21,6 +21,7 @@ export type CartItem = {
   name: string
   price: number
   qty: number
+  temp_type?: string | null
 }
 
 export type SelectedMember = {

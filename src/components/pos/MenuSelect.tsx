@@ -57,7 +57,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
       if (idx >= 0) {
         return prev.map((c, i) => i === idx ? { ...c, qty: c.qty + 1 } : c)
       }
-      return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1 }]
+      return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1, temp_type: item.temp_type }]
     })
   }
 

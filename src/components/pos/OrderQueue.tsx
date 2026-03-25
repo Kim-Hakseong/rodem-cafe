@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createSupabaseBrowser } from '@/lib/supabase/client'
-import { cn, formatPrice } from '@/lib/utils'
+import { cn, formatPrice, speak } from '@/lib/utils'
 
 interface OrderQueueProps {
   isOpen: boolean
@@ -62,13 +62,24 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
   }, [fetchOrders])
 
   const handleComplete = async (orderId: string) => {
+    const order = orders.find((o) => o.id === orderId)
     try {
       const res = await fetch('/api/orders/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId }),
       })
-      if (res.ok) fetchOrders()
+      if (res.ok) {
+        if (order) {
+          const name = (order.members as unknown as { name: string })?.name || ''
+          const itemsText = order.order_items.map((i) => {
+            const menuName = (i.menu_items as unknown as { name: string })?.name || ''
+            return `${menuName} ${i.quantity}잔`
+          }).join(', ')
+          speak(`${name}님 ${itemsText} 음료 나왔습니다`)
+        }
+        fetchOrders()
+      }
     } catch { /* silent */ }
   }
 
