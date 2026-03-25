@@ -20,17 +20,17 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
   const [transferQrUrl, setTransferQrUrl] = useState('')
   const shortage = cartTotal - member.prepaid_balance
 
-  // 계좌이체 QR 생성
+  // 계좌이체 QR 생성 — URL 방식 (스캔 시 복사 페이지로 이동)
   useEffect(() => {
-    if (showTransferInfo) {
-      const text = `${BANK_ACCOUNT.bank} ${BANK_ACCOUNT.number}`
-      QRCode.toDataURL(text, {
+    if (showTransferInfo && typeof window !== 'undefined') {
+      const url = `${window.location.origin}/transfer?amount=${cartTotal}`
+      QRCode.toDataURL(url, {
         width: 200,
         margin: 2,
         color: { dark: '#4a4541', light: '#ffffff' },
       }).then(setTransferQrUrl)
     }
-  }, [showTransferInfo])
+  }, [showTransferInfo, cartTotal])
 
   const handlePayment = (methodId: string) => {
     if (methodId === 'transfer') {
@@ -118,13 +118,13 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
               <div className="text-sm text-rodem-text-sub mt-1">{BANK_ACCOUNT.holder}</div>
             </div>
 
-            {/* QR 코드 — 스캔 시 계좌번호 텍스트 복사 */}
+            {/* QR 코드 — 스캔 시 계좌번호 복사 페이지로 이동 */}
             {transferQrUrl && (
               <div className="flex flex-col items-center mb-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={transferQrUrl} alt="계좌이체 QR" className="w-48 h-48 rounded-lg border border-rodem-border-light" />
                 <p className="text-sm text-rodem-text-sub mt-2 text-center">
-                  QR을 스캔하면 계좌번호가 복사됩니다
+                  QR 스캔 → 계좌번호 복사 → 뱅킹 앱에서 이체
                 </p>
               </div>
             )}
