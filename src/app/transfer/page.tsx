@@ -13,13 +13,13 @@ function TransferContent() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(BANK_ACCOUNT.number)
+      await navigator.clipboard.writeText(`${BANK_ACCOUNT.bank} ${BANK_ACCOUNT.number}`)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
       // fallback: 구형 브라우저
       const textarea = document.createElement('textarea')
-      textarea.value = BANK_ACCOUNT.number
+      textarea.value = `${BANK_ACCOUNT.bank} ${BANK_ACCOUNT.number}`
       textarea.style.position = 'fixed'
       textarea.style.opacity = '0'
       document.body.appendChild(textarea)
@@ -41,7 +41,7 @@ function TransferContent() {
         {/* 계좌 정보 */}
         <div className="bg-rodem-blue-light p-5 rounded-[14px] mb-4">
           <div className="text-base text-rodem-text-sub mb-1">{BANK_ACCOUNT.bank}</div>
-          <div className="text-[24px] font-bold text-rodem-blue">{BANK_ACCOUNT.number}</div>
+          <div className="text-[24px] font-bold text-rodem-blue">{`${BANK_ACCOUNT.bank} ${BANK_ACCOUNT.number}`}</div>
           <div className="text-sm text-rodem-text-sub mt-1">{BANK_ACCOUNT.holder}</div>
         </div>
 
