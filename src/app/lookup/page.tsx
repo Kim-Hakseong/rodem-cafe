@@ -71,12 +71,14 @@ function LookupPageInner() {
 
   const fetchOrders = async (memberId: string) => {
     const supabase = createSupabaseBrowser()
+    const threeMonthsAgo = new Date()
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
     const { data } = await supabase
       .from('orders')
       .select('id, total_price, created_at, order_payments(method, amount), order_items(quantity, unit_price, menu_items(name))')
       .eq('member_id', memberId)
+      .gte('created_at', threeMonthsAgo.toISOString())
       .order('created_at', { ascending: false })
-      .limit(20)
     if (data) setOrders(data as unknown as OrderHistory[])
   }
 
@@ -232,28 +234,19 @@ function LookupPageInner() {
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              {filtered.map((member) => {
-                const hasCredit = (member.credit_balance ?? 0) > 0
-                return (
+              {filtered.map((member) => (
                   <button
                     key={member.id}
                     onClick={() => handleSelectMember(member)}
                     className={cn(
                       'p-3 rounded-rodem-sm border text-left cursor-pointer transition-all',
-                      'bg-gradient-to-br from-[#fefcf9] to-[#f8f4ec]',
-                      hasCredit ? 'border-rodem-orange' : 'border-rodem-border-light',
+                      'bg-gradient-to-br from-[#fefcf9] to-[#f8f4ec] border-rodem-border-light',
                       'hover:-translate-y-[2px] hover:shadow-md'
                     )}
                   >
                     <div className="font-bold text-base text-rodem-text">{member.name}</div>
-                    {hasCredit && (
-                      <div className="text-[13px] text-rodem-orange font-semibold mt-1">
-                        외상 {formatPrice(member.credit_balance!)}
-                      </div>
-                    )}
                   </button>
-                )
-              })}
+                ))}
             </div>
           </>
         )}

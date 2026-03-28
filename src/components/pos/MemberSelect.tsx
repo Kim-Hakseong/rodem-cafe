@@ -160,7 +160,7 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
           <div className="text-lg text-rodem-text-sub">검색 결과가 없습니다</div>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2 max-h-[40vh] overflow-y-auto">
+        <div className="grid grid-cols-3 gap-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 380px)' }}>
           {filtered.map((member) => {
             const hasCredit = (member.credit_balance ?? 0) > 0
             return (

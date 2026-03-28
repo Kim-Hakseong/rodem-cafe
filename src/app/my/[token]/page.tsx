@@ -81,12 +81,14 @@ export default function MyPage() {
     if (authenticated && member) {
       const fetchOrders = async () => {
         const supabase = createSupabaseBrowser()
+        const threeMonthsAgo = new Date()
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
         const { data } = await supabase
           .from('orders')
           .select('id, total_price, created_at, order_items(quantity, menu_items(name))')
           .eq('member_id', member.id)
+          .gte('created_at', threeMonthsAgo.toISOString())
           .order('created_at', { ascending: false })
-          .limit(20)
         if (data) setOrders(data as unknown as OrderRow[])
       }
       fetchOrders()
