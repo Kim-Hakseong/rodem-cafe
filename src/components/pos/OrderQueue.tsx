@@ -49,7 +49,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
       .from('orders')
       .select('id, order_number, status, total_price, created_at, completed_at, members(name), order_items(quantity, menu_items(name)), order_payments(id, method, amount, transfer_status)')
       .gte('created_at', todayStart)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .limit(30)
 
     if (data) {
@@ -208,7 +208,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
                   {new Date(order.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-              <div className="text-base text-rodem-text-sub mb-1.5">
+              <div className="text-[3rem] font-bold text-black leading-tight mb-2">
                 {order.order_items?.map((item, i) => (
                   <span key={i}>
                     {(item.menu_items as unknown as { name: string })?.name} x{item.quantity}
