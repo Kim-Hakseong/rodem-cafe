@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to confirm' }, { status: 500 })
       }
     } else if (action === 'unpaid') {
-      // Mark as unpaid and convert to credit (외상)
+      // Mark as unpaid and convert to credit (미결제)
       const { error } = await supabase
         .from('order_payments')
         .update({ transfer_status: 'unpaid', method: 'credit' })

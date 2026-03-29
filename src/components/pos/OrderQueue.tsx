@@ -164,7 +164,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
   }
 
   return (
-    <div className="w-[280px] sm:w-[320px] lg:w-[340px] flex-shrink-0 bg-rodem-card border-r border-rodem-border-light flex flex-col h-full">
+    <div className="w-[560px] sm:w-[640px] lg:w-[680px] flex-shrink-0 bg-rodem-card border-r border-rodem-border-light flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-3.5 bg-gradient-to-br from-[#4a4541] to-[#3a3632] text-white">
         <div>

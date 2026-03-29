@@ -184,7 +184,7 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
                 <div className="font-bold text-lg text-rodem-text">{member.name}</div>
                 {hasCredit && (
                   <div className="text-sm text-rodem-orange font-semibold mt-1">
-                    외상 {formatPrice(member.credit_balance!)}
+                    미결제 {formatPrice(member.credit_balance!)}
                   </div>
                 )}
                 {(member.prepaid_balance ?? 0) > 0 && (

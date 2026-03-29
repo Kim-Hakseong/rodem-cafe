@@ -98,7 +98,7 @@ function LookupPageInner() {
   }
 
   const methodLabel: Record<string, string> = {
-    cash: '현금', transfer: '이체', credit: '외상', prepaid: '선불',
+    cash: '현금', transfer: '이체', credit: '미결제', prepaid: '선불',
   }
 
   const backPath = fromStaff ? '/pos' : '/'
@@ -112,7 +112,7 @@ function LookupPageInner() {
           {/* Balance cards */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="p-4 rounded-rodem-sm bg-rodem-orange-light border border-rodem-orange/20">
-              <div className="text-sm text-rodem-orange mb-1">외상 잔액</div>
+              <div className="text-sm text-rodem-orange mb-1">미결제 잔액</div>
               <div className="text-[22px] font-bold text-rodem-orange">
                 {formatPrice(selectedMember.credit_balance ?? 0)}
               </div>

@@ -172,7 +172,7 @@ function POSPageInner() {
     )
   }
 
-  // Header right buttons — staff only (정산, 외상, 고객)
+  // Header right buttons — staff only (정산, 미결제, 고객)
   const headerRight = isCustomer ? undefined : (
     <div className="flex gap-1.5">
       <button
@@ -191,7 +191,7 @@ function POSPageInner() {
         onClick={() => setShowCredit(true)}
         className="bg-white/10 border-none text-white py-1.5 px-3 rounded-lg text-base font-semibold cursor-pointer"
       >
-        💰 외상
+        💰 미결제
       </button>
     </div>
   )

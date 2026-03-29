@@ -39,7 +39,7 @@ export default function Home() {
           <span className="text-[34px]">📋</span>
           <div className="text-left">
             <div>봉사자 페이지</div>
-            <div className="text-[15px] font-normal opacity-85 mt-0.5">주문 접수 · 결제 기록 · 외상 관리</div>
+            <div className="text-[15px] font-normal opacity-85 mt-0.5">주문 접수 · 결제 기록 · 미결제 관리</div>
           </div>
         </button>
 

@@ -56,7 +56,7 @@ export default function TodaySummary({ onClose }: TodaySummaryProps) {
   const methodLabels: Record<string, { label: string; color: string }> = {
     cash: { label: '💵 현금', color: 'text-rodem-green' },
     transfer: { label: '🏦 이체', color: 'text-rodem-blue' },
-    credit: { label: '📋 외상', color: 'text-rodem-orange' },
+    credit: { label: '📋 미결제', color: 'text-rodem-orange' },
     prepaid: { label: '💰 선불', color: 'text-rodem-purple' },
   }
 

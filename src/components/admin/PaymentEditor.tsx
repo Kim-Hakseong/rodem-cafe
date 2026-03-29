@@ -24,7 +24,7 @@ type DateMode = 'single' | 'range' | 'all'
 
 const METHODS = ['cash', 'transfer', 'credit', 'prepaid'] as const
 const METHOD_LABELS: Record<string, string> = {
-  cash: '현금', transfer: '이체', credit: '외상', prepaid: '선불'
+  cash: '현금', transfer: '이체', credit: '미결제', prepaid: '선불'
 }
 const METHOD_COLORS: Record<string, string> = {
   cash: 'text-rodem-green', transfer: 'text-rodem-blue', credit: 'text-rodem-orange', prepaid: 'text-rodem-purple'

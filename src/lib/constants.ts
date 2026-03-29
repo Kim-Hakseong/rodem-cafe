@@ -1,7 +1,7 @@
 export const PAYMENT_METHODS = [
   { id: 'cash', label: '현금', icon: '💵', color: 'rodem-green', bgColor: 'rodem-green-light' },
   { id: 'transfer', label: '계좌이체', icon: '🏦', color: 'rodem-blue', bgColor: 'rodem-blue-light' },
-  { id: 'credit', label: '외상', icon: '📋', color: 'rodem-orange', bgColor: 'rodem-orange-light' },
+  { id: 'credit', label: '미결제', icon: '📋', color: 'rodem-orange', bgColor: 'rodem-orange-light' },
   { id: 'prepaid', label: '선불', icon: '💰', color: 'rodem-purple', bgColor: 'rodem-purple-light' },
 ] as const
 

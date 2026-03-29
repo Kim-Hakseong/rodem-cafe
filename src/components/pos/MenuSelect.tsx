@@ -164,12 +164,12 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
             {cart.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-1.5 bg-rodem-gold-light px-3 py-2 rounded-full text-base"
+                className="flex items-center gap-2 bg-rodem-gold-light px-4 py-2 rounded-full"
               >
-                <span className="font-semibold text-rodem-text">{item.name} x{item.qty}</span>
+                <span className="font-bold text-black text-[3rem] leading-tight">{item.name} x{item.qty}</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); removeFromCart(item.id) }}
-                  className="text-rodem-text-sub hover:text-rodem-red text-sm cursor-pointer bg-transparent border-none"
+                  className="text-rodem-text-sub hover:text-rodem-red text-2xl cursor-pointer bg-transparent border-none"
                 >
                   ✕
                 </button>
@@ -177,7 +177,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
             ))}
           </div>
           <div className="flex items-center justify-between">
-            <div className="text-2xl font-bold text-rodem-text">
+            <div className="text-[3rem] font-bold text-rodem-text leading-tight">
               합계 {formatPrice(cartTotal)}
             </div>
             <div className="flex gap-2">

@@ -55,13 +55,13 @@ export default function CreditManager({ onClose }: CreditManagerProps) {
   const totalCredit = members.reduce((sum, m) => sum + m.credit_balance, 0)
 
   return (
-    <Modal isOpen onClose={onClose} title="💰 외상 관리" maxWidth="max-w-md">
+    <Modal isOpen onClose={onClose} title="💰 미결제 관리" maxWidth="max-w-md">
       {loading ? (
         <div className="text-center py-8 text-rodem-text-sub">불러오는 중...</div>
       ) : (
         <>
           <div className="bg-rodem-orange-light p-4 rounded-rodem-sm mb-4 border border-rodem-orange/20">
-            <div className="text-sm text-rodem-orange mb-1">총 미정산 외상</div>
+            <div className="text-sm text-rodem-orange mb-1">총 미결제</div>
             <div className="text-[26px] font-bold text-rodem-orange">{formatPrice(totalCredit)}</div>
             <div className="text-sm text-rodem-text-sub mt-1">{members.length}명</div>
           </div>
@@ -109,7 +109,7 @@ export default function CreditManager({ onClose }: CreditManagerProps) {
               </div>
             ))}
             {members.length === 0 && (
-              <div className="text-center py-8 text-rodem-text-sub text-base">미정산 외상이 없습니다</div>
+              <div className="text-center py-8 text-rodem-text-sub text-base">미결제 내역이 없습니다</div>
             )}
           </div>
         </>

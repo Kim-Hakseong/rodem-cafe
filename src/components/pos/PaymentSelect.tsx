@@ -174,7 +174,7 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
                 onClick={() => handlePrepaidOption('credit')}
                 className="w-full py-3 rounded-rodem-sm bg-rodem-orange-light border border-rodem-orange text-rodem-orange font-bold cursor-pointer text-base"
               >
-                📋 부족분 외상 처리 ({formatPrice(shortage)})
+                📋 부족분 미결제 처리 ({formatPrice(shortage)})
               </button>
               <button
                 onClick={() => handlePrepaidOption('cash')}

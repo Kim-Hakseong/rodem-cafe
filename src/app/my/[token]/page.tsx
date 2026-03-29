@@ -145,7 +145,7 @@ export default function MyPage() {
       <div className="p-4">
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="p-4 rounded-rodem-sm bg-rodem-orange-light border border-rodem-orange/20">
-            <div className="text-sm text-rodem-orange mb-1">외상</div>
+            <div className="text-sm text-rodem-orange mb-1">미결제</div>
             <div className="text-[22px] font-bold text-rodem-orange">{formatPrice(member?.credit_balance ?? 0)}</div>
           </div>
           <div className="p-4 rounded-rodem-sm bg-rodem-purple-light border border-rodem-purple/20">

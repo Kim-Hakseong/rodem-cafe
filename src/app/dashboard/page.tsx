@@ -51,7 +51,7 @@ type MemberBalance = {
 }
 
 const TABS = ['주간', '월간', '고객별', '지출', 'Export'] as const
-const METHOD_LABELS: Record<string, string> = { cash: '현금', transfer: '이체', credit: '외상', prepaid: '선불' }
+const METHOD_LABELS: Record<string, string> = { cash: '현금', transfer: '이체', credit: '미결제', prepaid: '선불' }
 const METHOD_COLORS: Record<string, string> = { cash: '#5a9a6e', transfer: '#4a7fd4', credit: '#d49a4a', prepaid: '#7c5fbf' }
 const METHODS = ['cash', 'transfer', 'credit', 'prepaid'] as const
 
@@ -335,12 +335,12 @@ export default function DashboardPage() {
       monthMap.set(key, existing)
     })
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      Array.from(monthMap.entries()).map(([month, v]) => ({ 월: month, 현금: v.cash, 이체: v.transfer, 외상: v.credit, 선불: v.prepaid, 합계: v.total, 주문수: v.count }))
+      Array.from(monthMap.entries()).map(([month, v]) => ({ 월: month, 현금: v.cash, 이체: v.transfer, 미결제: v.credit, 선불: v.prepaid, 합계: v.total, 주문수: v.count }))
     ), '월별')
 
     // Sheet 3: 고객별
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      customerStats.map((c) => ({ 이름: c.name, 총액: c.total, 주문수: c.count, 외상: c.credit }))
+      customerStats.map((c) => ({ 이름: c.name, 총액: c.total, 주문수: c.count, 미결제: c.credit }))
     ), '고객별')
 
     // Sheet 4: 메뉴별
@@ -391,13 +391,13 @@ export default function DashboardPage() {
       sundayMap.set(key, existing)
     })
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      Array.from(sundayMap.entries()).map(([date, v]) => ({ 날짜: date, 현금: v.cash, 이체: v.transfer, 외상: v.credit, 선불: v.prepaid, 합계: v.total, 주문수: v.count }))
+      Array.from(sundayMap.entries()).map(([date, v]) => ({ 날짜: date, 현금: v.cash, 이체: v.transfer, 미결제: v.credit, 선불: v.prepaid, 합계: v.total, 주문수: v.count }))
     ), '주간수입상세')
 
-    // Sheet 7: 외상미수금
+    // Sheet 7: 미결제현황
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      memberBalances.filter((m) => m.credit_balance > 0).map((m) => ({ 이름: m.name, 부서: m.department || '', 외상잔액: m.credit_balance }))
-    ), '외상미수금')
+      memberBalances.filter((m) => m.credit_balance > 0).map((m) => ({ 이름: m.name, 부서: m.department || '', 미결제잔액: m.credit_balance }))
+    ), '미결제현황')
 
     // Sheet 8: 선불잔액현황
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
@@ -446,7 +446,7 @@ export default function DashboardPage() {
             <h3 className="text-xl font-bold text-rodem-text mb-2">종합 Export</h3>
             <p className="text-base text-rodem-text-sub mb-6">
               전체주문 · 월별 · 고객별 · 메뉴별<br />
-              회계보고 · 주간수입상세 · 외상미수금 · 선불잔액현황
+              회계보고 · 주간수입상세 · 미결제현황 · 선불잔액현황
             </p>
             <button onClick={handleExport} className="px-8 py-4 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold text-lg cursor-pointer shadow-[0_6px_24px_rgba(201,162,39,0.2)]">
               📥 엑셀 다운로드 (8시트)
@@ -544,7 +544,7 @@ export default function DashboardPage() {
                 <div className="text-[22px] font-bold text-rodem-text">{customerStats.length}명</div>
               </div>
               <div className="p-3 rounded-rodem-sm bg-rodem-orange-light border border-rodem-orange/20">
-                <div className="text-sm text-rodem-orange mb-1">외상 합계</div>
+                <div className="text-sm text-rodem-orange mb-1">미결제 합계</div>
                 <div className="text-xl font-bold text-rodem-orange">{formatPrice(customerStats.reduce((s, c) => s + c.credit, 0))}</div>
               </div>
               <div className="p-3 rounded-rodem-sm bg-rodem-gold-light border border-rodem-gold/20">
@@ -572,7 +572,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <div className="text-base font-bold text-rodem-text">{formatPrice(c.total)}</div>
-                    {c.credit > 0 && <div className="text-[13px] text-rodem-orange">외상 {formatPrice(c.credit)}</div>}
+                    {c.credit > 0 && <div className="text-[13px] text-rodem-orange">미결제 {formatPrice(c.credit)}</div>}
                   </div>
                 </div>
               ))}
