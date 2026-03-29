@@ -84,6 +84,7 @@ export default function DashboardPage() {
   const [prevOrders, setPrevOrders] = useState<OrderData[]>([])
   const [allOrders, setAllOrders] = useState<OrderData[]>([])
   const [loading, setLoading] = useState(true)
+  const [timeFilter, setTimeFilter] = useState<'전체' | '오전' | '오후'>('전체')
 
   // Expense states
   const [expenseItems, setExpenseItems] = useState<ExpenseItem[]>([])
@@ -163,10 +164,22 @@ export default function DashboardPage() {
     fetchBalances()
   }, [authenticated, tab, fetchOrders, fetchAllOrders, fetchExpenseItems, fetchExpenses, fetchBalances])
 
+  // Time filter
+  const filterByTime = useCallback((list: OrderData[]) => {
+    if (timeFilter === '전체') return list
+    return list.filter((o) => {
+      const hour = new Date(o.created_at).getHours()
+      return timeFilter === '오전' ? hour < 12 : hour >= 12
+    })
+  }, [timeFilter])
+
+  const filteredOrders = useMemo(() => filterByTime(orders), [orders, filterByTime])
+  const filteredPrevOrders = useMemo(() => filterByTime(prevOrders), [prevOrders, filterByTime])
+
   // Summary
   const summary = useMemo(() => {
     const s = { cash: 0, transfer: 0, credit: 0, prepaid: 0, total: 0, count: 0 }
-    orders.forEach((o) => {
+    filteredOrders.forEach((o) => {
       s.count++
       o.order_payments?.forEach((p) => {
         if (p.method in s) s[p.method as keyof Omit<typeof s, 'total' | 'count'>] += p.amount
@@ -174,11 +187,11 @@ export default function DashboardPage() {
       })
     })
     return s
-  }, [orders])
+  }, [filteredOrders])
 
   const prevSummary = useMemo(() => {
     const s = { cash: 0, transfer: 0, credit: 0, prepaid: 0, total: 0, count: 0 }
-    prevOrders.forEach((o) => {
+    filteredPrevOrders.forEach((o) => {
       s.count++
       o.order_payments?.forEach((p) => {
         if (p.method in s) s[p.method as keyof Omit<typeof s, 'total' | 'count'>] += p.amount
@@ -186,7 +199,7 @@ export default function DashboardPage() {
       })
     })
     return s
-  }, [prevOrders])
+  }, [filteredPrevOrders])
 
   const pieData = useMemo(() =>
     METHODS.map((m) => ({ name: METHOD_LABELS[m], value: summary[m], color: METHOD_COLORS[m] })).filter((d) => d.value > 0)
@@ -198,12 +211,12 @@ export default function DashboardPage() {
 
   const lineData = useMemo(() => {
     const dayMap = new Map<string, number>()
-    orders.forEach((o) => {
+    filteredOrders.forEach((o) => {
       const day = new Date(o.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
       dayMap.set(day, (dayMap.get(day) || 0) + o.total_price)
     })
     return Array.from(dayMap.entries()).map(([date, total]) => ({ date, total }))
-  }, [orders])
+  }, [filteredOrders])
 
   const customerStats = useMemo(() => {
     const map = new Map<string, { name: string; total: number; count: number; credit: number }>()
@@ -580,6 +593,18 @@ export default function DashboardPage() {
           </>
         ) : (
           <>
+            {/* 오전/오후 필터 */}
+            <div className="flex gap-1.5 mb-4">
+              {(['전체', '오전', '오후'] as const).map((t) => (
+                <button key={t} onClick={() => setTimeFilter(t)} className={cn(
+                  'px-4 py-2 rounded-rodem-sm text-sm font-bold cursor-pointer border',
+                  timeFilter === t ? 'bg-[#4a4541] text-white border-[#4a4541]' : 'bg-rodem-card text-rodem-text-sub border-rodem-border-light'
+                )}>
+                  {t === '전체' ? '전체' : t === '오전' ? '오전 (12시 전)' : '오후 (12시 후)'}
+                </button>
+              ))}
+            </div>
+
             {/* Summary cards */}
             <div className="grid grid-cols-2 gap-3 mb-4">
               {METHODS.map((m) => {
@@ -671,7 +696,7 @@ export default function DashboardPage() {
 
             <h4 className="font-bold text-base text-rodem-text mb-3">최근 주문</h4>
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {orders.slice(0, 20).map((o) => (
+              {filteredOrders.slice(0, 20).map((o) => (
                 <div key={o.id} className="flex items-center justify-between p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
                   <div>
                     <div className="text-base font-semibold text-rodem-text">{(o.members as unknown as { name: string })?.name}</div>
