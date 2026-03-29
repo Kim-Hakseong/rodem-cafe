@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createSupabaseBrowser } from '@/lib/supabase/client'
 import { cn, formatPrice, speak } from '@/lib/utils'
 
@@ -37,6 +37,9 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
   const [showCancelled, setShowCancelled] = useState(false)
   const isStaff = mode === 'staff'
 
+  // TTS: 이전 주문 상태를 추적하여 변경 감지
+  const prevOrderMapRef = useRef<Map<string, string> | null>(null)
+
   const fetchOrders = useCallback(async () => {
     const supabase = createSupabaseBrowser()
     const today = new Date()
@@ -49,8 +52,48 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
       .order('created_at', { ascending: false })
       .limit(30)
 
-    if (data) setOrders(data as unknown as QueueOrder[])
-  }, [])
+    if (data) {
+      const newOrders = data as unknown as QueueOrder[]
+      setOrders(newOrders)
+
+      const prev = prevOrderMapRef.current
+      if (prev !== null) {
+        // 봉사자 페이지: 새 주문 접수 알림
+        if (mode === 'staff') {
+          const newPending = newOrders.filter(
+            (o) => o.status === 'pending' && !prev.has(o.id)
+          )
+          if (newPending.length > 0) {
+            const order = newPending[0]
+            const name = (order.members as unknown as { name: string })?.name || ''
+            const itemsText = order.order_items.map((i) => {
+              const menuName = (i.menu_items as unknown as { name: string })?.name || ''
+              return `${menuName} ${i.quantity}잔`
+            }).join(', ')
+            speak(`${name}님 ${itemsText} 주문이 접수되었습니다`)
+          }
+        }
+
+        // 고객 페이지: 음료 완료 알림
+        if (mode === 'customer') {
+          const newlyCompleted = newOrders.filter(
+            (o) => o.status === 'completed' && prev.get(o.id) === 'pending'
+          )
+          if (newlyCompleted.length > 0) {
+            const order = newlyCompleted[0]
+            const name = (order.members as unknown as { name: string })?.name || ''
+            const itemsText = order.order_items.map((i) => {
+              const menuName = (i.menu_items as unknown as { name: string })?.name || ''
+              return `${menuName} ${i.quantity}잔`
+            }).join(', ')
+            speak(`${name}님 ${itemsText} 음료 나왔습니다`)
+          }
+        }
+      }
+
+      prevOrderMapRef.current = new Map(newOrders.map((o) => [o.id, o.status]))
+    }
+  }, [mode])
 
   useEffect(() => {
     fetchOrders()
@@ -62,24 +105,13 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
   }, [fetchOrders])
 
   const handleComplete = async (orderId: string) => {
-    const order = orders.find((o) => o.id === orderId)
     try {
       const res = await fetch('/api/orders/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId }),
       })
-      if (res.ok) {
-        if (order) {
-          const name = (order.members as unknown as { name: string })?.name || ''
-          const itemsText = order.order_items.map((i) => {
-            const menuName = (i.menu_items as unknown as { name: string })?.name || ''
-            return `${menuName} ${i.quantity}잔`
-          }).join(', ')
-          speak(`${name}님 ${itemsText} 음료 나왔습니다`)
-        }
-        fetchOrders()
-      }
+      if (res.ok) fetchOrders()
     } catch { /* silent */ }
   }
 

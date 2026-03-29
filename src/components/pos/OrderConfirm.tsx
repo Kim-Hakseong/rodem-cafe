@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { formatPrice, speak } from '@/lib/utils'
+import { formatPrice } from '@/lib/utils'
 import { PAYMENT_METHODS } from '@/lib/constants'
 import type { SelectedMember, CartItem, PaymentInfo } from '@/app/pos/page'
 
@@ -51,11 +51,6 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
       })
 
       if (res.ok) {
-        const itemsText = cart.map((c) => {
-          const temp = c.temp_type ? ` ${c.temp_type}` : ''
-          return `${c.name}${temp} ${c.qty}잔`
-        }).join(', ')
-        speak(`${member.name}님 ${itemsText} 주문이 접수되었습니다`)
         onComplete()
       } else {
         alert('주문 저장에 실패했습니다. 다시 시도해주세요.')
