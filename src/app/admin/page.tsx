@@ -18,6 +18,9 @@ export default function AdminPage() {
   const [tab, setTab] = useState<typeof TABS[number]>('주문관리')
   const [qrEnabled, setQrEnabled] = useState(true)
   const [savingQr, setSavingQr] = useState(false)
+  const [openTime, setOpenTime] = useState('10:35')
+  const [closeTime, setCloseTime] = useState('12:30')
+  const [savingHours, setSavingHours] = useState(false)
 
   const handlePinComplete = useCallback(async (pin: string) => {
     try {
@@ -45,10 +48,22 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json()
         setQrEnabled(data.qr_enabled !== false)
+        setOpenTime(data.open_time || '10:35')
+        setCloseTime(data.close_time || '12:30')
       }
     }
     fetchSettings()
   }, [authenticated])
+
+  const saveOperatingHours = async () => {
+    setSavingHours(true)
+    await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ open_time: openTime, close_time: closeTime }),
+    })
+    setSavingHours(false)
+  }
 
   const toggleQr = async () => {
     setSavingQr(true)
@@ -140,6 +155,42 @@ export default function AdminPage() {
               )}>
                 {qrEnabled ? '활성화됨' : '비활성화됨'}
               </div>
+            </div>
+
+            {/* 운영시간 설정 */}
+            <div className="p-4 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
+              <div className="font-bold text-base text-rodem-text mb-1">🕐 운영시간 설정</div>
+              <div className="text-sm text-rodem-text-sub mb-3">
+                고객 주문 페이지는 운영시간 외 마감됩니다
+              </div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-1">
+                  <label className="text-sm text-rodem-text-sub block mb-1">시작</label>
+                  <input
+                    type="time"
+                    value={openTime}
+                    onChange={(e) => setOpenTime(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-rodem-border-light text-base text-rodem-text"
+                  />
+                </div>
+                <span className="text-lg text-rodem-text-sub mt-5">~</span>
+                <div className="flex-1">
+                  <label className="text-sm text-rodem-text-sub block mb-1">종료</label>
+                  <input
+                    type="time"
+                    value={closeTime}
+                    onChange={(e) => setCloseTime(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-rodem-border-light text-base text-rodem-text"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={saveOperatingHours}
+                disabled={savingHours}
+                className="px-4 py-2 rounded-[10px] bg-rodem-gold text-white font-bold text-sm cursor-pointer border-none disabled:opacity-50"
+              >
+                {savingHours ? '저장 중...' : '저장'}
+              </button>
             </div>
           </div>
         )}

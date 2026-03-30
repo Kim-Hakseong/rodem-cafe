@@ -21,7 +21,6 @@ type MemberRow = {
 export default function MemberSelect({ onSelect }: MemberSelectProps) {
   const [members, setMembers] = useState<MemberRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [showChosung, setShowChosung] = useState(false)
   const [selectedDept, setSelectedDept] = useState<string | null>(null)
   const [enteredChosungs, setEnteredChosungs] = useState<string[]>([])
 
@@ -38,7 +37,6 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
     fetchMembers()
   }, [])
 
-  // Real-time filtering: department + chosung prefix match
   const filtered = useMemo(() => {
     const inputStr = enteredChosungs.join('')
     return members.filter((m) => {
@@ -51,13 +49,6 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
   const handleDeptSelect = (dept: string | null) => {
     setSelectedDept(dept)
     setEnteredChosungs([])
-    setShowChosung(true)
-  }
-
-  const handleBackToDept = () => {
-    setShowChosung(false)
-    setSelectedDept(null)
-    setEnteredChosungs([])
   }
 
   if (loading) {
@@ -68,52 +59,38 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
     )
   }
 
-  // Phase 1: Department selection
-  if (!showChosung) {
-    return (
-      <div className="p-4">
-        <h3 className="text-xl font-bold text-rodem-text mb-4 text-center">부서를 선택하세요</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {DEPARTMENTS.map((dept) => {
-            const count = members.filter((m) => m.department === dept).length
-            return (
-              <button
-                key={dept}
-                onClick={() => handleDeptSelect(dept)}
-                className="p-5 rounded-rodem-sm border-2 border-rodem-border-light bg-gradient-to-br from-[#fefcf9] to-[#f8f4ec] text-center cursor-pointer hover:-translate-y-[2px] hover:shadow-md transition-all"
-              >
-                <div className="text-xl font-bold text-rodem-text">{dept}</div>
-                <div className="text-base text-rodem-text-sub mt-1">{count}명</div>
-              </button>
-            )
-          })}
-          <button
-            onClick={() => handleDeptSelect(null)}
-            className="p-5 rounded-rodem-sm border-2 border-rodem-gold bg-rodem-gold-light text-center cursor-pointer hover:-translate-y-[2px] hover:shadow-md transition-all col-span-2"
-          >
-            <div className="text-xl font-bold text-rodem-gold">전체</div>
-            <div className="text-base text-rodem-text-sub mt-1">{members.length}명</div>
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Phase 2: Chosung input + real-time filtered list
   return (
     <div className="p-4 flex flex-col gap-3">
-      {/* Department indicator + back */}
-      <div className="flex items-center justify-between">
-        <div className="text-lg font-bold text-rodem-text">
-          {selectedDept ? `📁 ${selectedDept}` : '📁 전체'}
-          <span className="text-base font-normal text-rodem-text-sub ml-2">({filtered.length}명)</span>
-        </div>
+      {/* Department buttons — horizontal scroll */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
         <button
-          onClick={handleBackToDept}
-          className="text-base text-rodem-text-sub cursor-pointer bg-transparent border-none underline"
+          onClick={() => handleDeptSelect(null)}
+          className={cn(
+            'px-4 py-2.5 rounded-rodem-sm text-base font-bold whitespace-nowrap cursor-pointer border-2 flex-shrink-0 transition-all',
+            selectedDept === null
+              ? 'bg-rodem-gold text-white border-rodem-gold'
+              : 'bg-rodem-card text-rodem-text-sub border-rodem-border-light'
+          )}
         >
-          부서 변경
+          전체 ({members.length})
         </button>
+        {DEPARTMENTS.map((dept) => {
+          const count = members.filter((m) => m.department === dept).length
+          return (
+            <button
+              key={dept}
+              onClick={() => handleDeptSelect(dept)}
+              className={cn(
+                'px-4 py-2.5 rounded-rodem-sm text-base font-bold whitespace-nowrap cursor-pointer border-2 flex-shrink-0 transition-all',
+                selectedDept === dept
+                  ? 'bg-rodem-gold text-white border-rodem-gold'
+                  : 'bg-rodem-card text-rodem-text-sub border-rodem-border-light'
+              )}
+            >
+              {dept} ({count})
+            </button>
+          )
+        })}
       </div>
 
       {/* Entered chosungs display */}
@@ -140,7 +117,7 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
         )}
       </div>
 
-      {/* Chosung buttons grid - compact */}
+      {/* Chosung buttons grid */}
       <div className="grid grid-cols-7 gap-1.5">
         {CHOSUNG_LIST.map((ch) => (
           <button
@@ -153,14 +130,19 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
         ))}
       </div>
 
-      {/* Real-time filtered member list */}
-      {filtered.length === 0 ? (
+      {/* Search results — only shown when chosung input exists */}
+      {enteredChosungs.length === 0 ? (
+        <div className="text-center py-8">
+          <div className="text-[36px] mb-2">🔍</div>
+          <div className="text-lg text-rodem-text-sub">초성을 입력하여 검색하세요</div>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-8">
           <div className="text-[36px] mb-2">🔍</div>
           <div className="text-lg text-rodem-text-sub">검색 결과가 없습니다</div>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 380px)' }}>
+        <div className="grid grid-cols-3 gap-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 420px)' }}>
           {filtered.map((member) => {
             const hasCredit = (member.credit_balance ?? 0) > 0
             return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, Suspense } from 'react'
+import { useState, useCallback, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import PinInput from '@/components/ui/PinInput'
 import Header from '@/components/ui/Header'
@@ -22,6 +22,7 @@ export type CartItem = {
   price: number
   qty: number
   temp_type?: string | null
+  options?: { shot?: string }
 }
 
 export type SelectedMember = {
@@ -53,6 +54,8 @@ function POSPageInner() {
   const isCustomer = mode === 'customer'
 
   const [authenticated, setAuthenticated] = useState(isCustomer)
+  const [isClosed, setIsClosed] = useState(false)
+  const [operatingHours, setOperatingHours] = useState({ open: '10:35', close: '12:30' })
   const [step, setStep] = useState(0)
   const [selectedMember, setSelectedMember] = useState<SelectedMember | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -75,6 +78,32 @@ function POSPageInner() {
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ show: true, message, type })
   }, [])
+
+  // Operating hours check (customer mode only)
+  useEffect(() => {
+    if (!isCustomer) return
+    const checkHours = async () => {
+      try {
+        const res = await fetch('/api/admin/settings')
+        if (!res.ok) return
+        const data = await res.json()
+        const open = data.open_time || '10:35'
+        const close = data.close_time || '12:30'
+        setOperatingHours({ open, close })
+
+        const now = new Date()
+        const [oh, om] = open.split(':').map(Number)
+        const [ch, cm] = close.split(':').map(Number)
+        const nowMin = now.getHours() * 60 + now.getMinutes()
+        const openMin = oh * 60 + om
+        const closeMin = ch * 60 + cm
+        setIsClosed(nowMin < openMin || nowMin >= closeMin)
+      } catch { /* silent */ }
+    }
+    checkHours()
+    const interval = setInterval(checkHours, 30000)
+    return () => clearInterval(interval)
+  }, [isCustomer])
 
   // PIN verification (staff only)
   const handlePinComplete = useCallback(async (pin: string) => {
@@ -130,6 +159,28 @@ function POSPageInner() {
   }, [resetOrder, showToast])
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0)
+
+  // Closed screen (customer mode only)
+  if (isCustomer && isClosed) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#efebe4] via-[#e5e0d8] to-[#dedad2] relative overflow-hidden font-sans">
+        <div className="absolute top-[10%] left-[5%] w-[280px] h-[280px] rounded-full bg-[radial-gradient(circle,rgba(201,162,39,0.05)_0%,transparent_70%)]" />
+        <div className="absolute bottom-[12%] right-[8%] w-[200px] h-[200px] rounded-full bg-[radial-gradient(circle,rgba(90,154,110,0.04)_0%,transparent_70%)]" />
+        <div className="text-[64px] mb-4 relative z-10">☕</div>
+        <h2 className="text-[28px] font-bold mb-2 text-rodem-text relative z-10">주문 마감</h2>
+        <p className="text-lg text-rodem-text-sub mb-2 relative z-10">현재 주문 시간이 아닙니다</p>
+        <div className="bg-rodem-gold-light px-6 py-3 rounded-rodem-sm mb-8 relative z-10">
+          <span className="text-lg font-bold text-rodem-gold">운영시간: {operatingHours.open} ~ {operatingHours.close}</span>
+        </div>
+        <button
+          onClick={() => router.push('/')}
+          className="px-6 py-3 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base relative z-10"
+        >
+          ← 홈으로 돌아가기
+        </button>
+      </div>
+    )
+  }
 
   // PIN screen (staff only)
   if (!authenticated) {

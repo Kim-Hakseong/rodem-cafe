@@ -11,11 +11,12 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts'
 import type { PieLabelRenderProps } from 'recharts'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 type OrderData = {
   id: string
   total_price: number
+  status: string
   created_at: string
   member_id: string
   order_payments: { method: string; amount: number }[]
@@ -50,7 +51,7 @@ type MemberBalance = {
   prepaid_balance: number
 }
 
-const TABS = ['주간', '월간', '고객별', '지출', 'Export'] as const
+const TABS = ['전체', '오늘', '월간', '고객별', '지출', 'Export'] as const
 const METHOD_LABELS: Record<string, string> = { cash: '현금', transfer: '이체', credit: '미결제', prepaid: '선불' }
 const METHOD_COLORS: Record<string, string> = { cash: '#5a9a6e', transfer: '#4a7fd4', credit: '#d49a4a', prepaid: '#7c5fbf' }
 const METHODS = ['cash', 'transfer', 'credit', 'prepaid'] as const
@@ -58,11 +59,9 @@ const METHODS = ['cash', 'transfer', 'credit', 'prepaid'] as const
 function getDateRange(tab: string): { start: Date; end: Date; prevStart: Date; prevEnd: Date } {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  if (tab === '주간') {
-    const day = today.getDay()
-    const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - day)
-    const prevWeekStart = new Date(weekStart); prevWeekStart.setDate(prevWeekStart.getDate() - 7)
-    return { start: weekStart, end: now, prevStart: prevWeekStart, prevEnd: weekStart }
+  if (tab === '오늘') {
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
+    return { start: today, end: now, prevStart: yesterday, prevEnd: today }
   }
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -79,7 +78,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [authenticated, setAuthenticated] = useState(false)
   const [pinError, setPinError] = useState(false)
-  const [tab, setTab] = useState<typeof TABS[number]>('주간')
+  const [tab, setTab] = useState<typeof TABS[number]>('전체')
   const [orders, setOrders] = useState<OrderData[]>([])
   const [prevOrders, setPrevOrders] = useState<OrderData[]>([])
   const [allOrders, setAllOrders] = useState<OrderData[]>([])
@@ -111,7 +110,7 @@ export default function DashboardPage() {
     const supabase = createSupabaseBrowser()
     const { data } = await supabase
       .from('orders')
-      .select('id, total_price, created_at, member_id, order_payments(method, amount), order_items(quantity, unit_price, menu_items(name, category)), members(name)')
+      .select('id, total_price, status, created_at, member_id, order_payments(method, amount), order_items(quantity, unit_price, menu_items(name, category)), members(name)')
       .gte('created_at', start.toISOString())
       .lte('created_at', end.toISOString())
       .order('created_at', { ascending: false })
@@ -122,7 +121,7 @@ export default function DashboardPage() {
     const supabase = createSupabaseBrowser()
     const { data } = await supabase
       .from('orders')
-      .select('id, total_price, created_at, member_id, order_payments(method, amount), order_items(quantity, unit_price, menu_items(name, category)), members(name)')
+      .select('id, total_price, status, created_at, member_id, order_payments(method, amount), order_items(quantity, unit_price, menu_items(name, category)), members(name)')
       .order('created_at', { ascending: false })
       .limit(5000)
     if (data) setAllOrders(data as unknown as OrderData[])
@@ -320,22 +319,58 @@ export default function DashboardPage() {
     fetchExpenses()
   }
 
-  // --- Export (8 sheets) ---
-  const handleExport = () => {
-    const wb = XLSX.utils.book_new()
+  // --- Export (8 sheets with exceljs) ---
+  const handleExport = async () => {
+    const wb = new ExcelJS.Workbook()
+    const grayFill: ExcelJS.FillPattern = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDDDDD' } }
+    const yellowFill: ExcelJS.FillPattern = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } }
+    const headerFill: ExcelJS.FillPattern = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E3DA' } }
+    const headerFont: Partial<ExcelJS.Font> = { bold: true }
 
-    // Sheet 1: 전체주문
-    const orderRows = allOrders.map((o) => ({
-      날짜: new Date(o.created_at).toLocaleDateString('ko-KR'),
-      시간: new Date(o.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-      성도: (o.members as unknown as { name: string })?.name || '',
-      금액: o.total_price,
-      결제: o.order_payments?.map((p) => METHOD_LABELS[p.method]).join('+') || '',
-      메뉴: o.order_items?.map((i) => `${(i.menu_items as unknown as { name: string })?.name}x${i.quantity}`).join(', ') || '',
-    }))
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(orderRows), '전체주문')
+    const styleHeaders = (ws: ExcelJS.Worksheet) => {
+      const row = ws.getRow(1)
+      row.eachCell((cell) => { cell.fill = headerFill; cell.font = headerFont })
+    }
+
+    // Sheet 1: 전체주문 (with colors)
+    const ws1 = wb.addWorksheet('전체주문')
+    ws1.columns = [
+      { header: '날짜', key: 'date', width: 12 },
+      { header: '시간', key: 'time', width: 10 },
+      { header: '성도', key: 'member', width: 12 },
+      { header: '금액', key: 'amount', width: 12 },
+      { header: '결제', key: 'payment', width: 14 },
+      { header: '메뉴', key: 'menu', width: 30 },
+    ]
+    allOrders.forEach((o) => {
+      const d = new Date(o.created_at)
+      const isAfternoon = d.getHours() >= 12
+      const paymentStr = o.order_payments?.map((p) => METHOD_LABELS[p.method]).join('+') || ''
+      const hasTransfer = o.order_payments?.some((p) => p.method === 'transfer')
+      const row = ws1.addRow({
+        date: d.toLocaleDateString('ko-KR'),
+        time: d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+        member: (o.members as unknown as { name: string })?.name || '',
+        amount: o.total_price,
+        payment: paymentStr,
+        menu: o.order_items?.map((i) => `${(i.menu_items as unknown as { name: string })?.name}x${i.quantity}`).join(', ') || '',
+      })
+      if (isAfternoon) row.eachCell((cell) => { cell.fill = grayFill })
+      if (hasTransfer) row.getCell('payment').fill = yellowFill
+    })
+    styleHeaders(ws1)
 
     // Sheet 2: 월별
+    const ws2 = wb.addWorksheet('월별')
+    ws2.columns = [
+      { header: '월', key: 'month', width: 16 },
+      { header: '현금', key: 'cash', width: 12 },
+      { header: '이체', key: 'transfer', width: 12 },
+      { header: '미결제', key: 'credit', width: 12 },
+      { header: '선불', key: 'prepaid', width: 12 },
+      { header: '실매출', key: 'realTotal', width: 12 },
+      { header: '주문수', key: 'count', width: 8 },
+    ]
     const monthMap = new Map<string, { cash: number; transfer: number; credit: number; prepaid: number; total: number; count: number }>()
     allOrders.forEach((o) => {
       const key = new Date(o.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
@@ -347,16 +382,30 @@ export default function DashboardPage() {
       })
       monthMap.set(key, existing)
     })
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      Array.from(monthMap.entries()).map(([month, v]) => ({ 월: month, 현금: v.cash, 이체: v.transfer, 미결제: v.credit, 선불: v.prepaid, 합계: v.total, 주문수: v.count }))
-    ), '월별')
+    monthMap.forEach((v, month) => {
+      const row = ws2.addRow({ month, cash: v.cash, transfer: v.transfer, credit: v.credit, prepaid: v.prepaid, realTotal: v.total - v.prepaid, count: v.count })
+      row.getCell('transfer').fill = yellowFill
+    })
+    styleHeaders(ws2)
 
     // Sheet 3: 고객별
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      customerStats.map((c) => ({ 이름: c.name, 총액: c.total, 주문수: c.count, 미결제: c.credit }))
-    ), '고객별')
+    const ws3 = wb.addWorksheet('고객별')
+    ws3.columns = [
+      { header: '이름', key: 'name', width: 12 },
+      { header: '총액', key: 'total', width: 12 },
+      { header: '주문수', key: 'count', width: 8 },
+      { header: '미결제', key: 'credit', width: 12 },
+    ]
+    customerStats.forEach((c) => ws3.addRow({ name: c.name, total: c.total, count: c.count, credit: c.credit }))
+    styleHeaders(ws3)
 
     // Sheet 4: 메뉴별
+    const ws4 = wb.addWorksheet('메뉴별')
+    ws4.columns = [
+      { header: '메뉴', key: 'menu', width: 20 },
+      { header: '판매수', key: 'count', width: 10 },
+      { header: '매출', key: 'revenue', width: 12 },
+    ]
     const menuMap = new Map<string, { count: number; revenue: number }>()
     allOrders.forEach((o) => o.order_items?.forEach((i) => {
       const name = (i.menu_items as unknown as { name: string })?.name || '알수없음'
@@ -365,35 +414,48 @@ export default function DashboardPage() {
       existing.revenue += i.unit_price * (i.quantity || 1)
       menuMap.set(name, existing)
     }))
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      Array.from(menuMap.entries()).map(([name, v]) => ({ 메뉴: name, 판매수: v.count, 매출: v.revenue })).sort((a, b) => b.매출 - a.매출)
-    ), '메뉴별')
+    Array.from(menuMap.entries())
+      .map(([name, v]) => ({ menu: name, count: v.count, revenue: v.revenue }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .forEach((r) => ws4.addRow(r))
+    styleHeaders(ws4)
 
-    // Sheet 5: 회계보고 (월별 수입/지출 요약)
+    // Sheet 5: 회계보고
+    const ws5 = wb.addWorksheet('회계보고')
+    ws5.columns = [
+      { header: '월', key: 'month', width: 8 },
+      { header: '수입', key: 'income', width: 12 },
+      { header: '지출합계', key: 'expense', width: 12 },
+      { header: '차액', key: 'diff', width: 12 },
+      { header: '지출내역', key: 'detail', width: 40 },
+    ]
     const year = new Date().getFullYear()
-    const accountingRows: Record<string, unknown>[] = []
     for (let m = 0; m < 12; m++) {
-      const monthLabel = `${m + 1}월`
-      const monthOrders = allOrders.filter((o) => {
-        const d = new Date(o.created_at)
-        return d.getFullYear() === year && d.getMonth() === m
-      })
-      const income = monthOrders.reduce((s, o) => s + o.total_price, 0)
-      const monthExpenses = expenses.filter((e) => {
-        const d = new Date(e.recorded_at)
-        return d.getFullYear() === year && d.getMonth() === m
-      })
+      const monthOrders = allOrders.filter((o) => { const d = new Date(o.created_at); return d.getFullYear() === year && d.getMonth() === m })
+      const prepaidTotal = monthOrders.reduce((s, o) => s + (o.order_payments?.filter(p => p.method === 'prepaid').reduce((ps, p) => ps + p.amount, 0) || 0), 0)
+      const income = monthOrders.reduce((s, o) => s + o.total_price, 0) - prepaidTotal
+      const monthExpenses = expenses.filter((e) => { const d = new Date(e.recorded_at); return d.getFullYear() === year && d.getMonth() === m })
       const expenseTotal = monthExpenses.reduce((s, e) => s + e.amount, 0)
-      const expenseDetail = monthExpenses.map((e) => `${e.name}${e.quantity > 1 ? ` ${e.quantity}개` : ''} ${formatPrice(e.amount)}`).join(', ')
-      accountingRows.push({ 월: monthLabel, 수입: income, 지출합계: expenseTotal, 차액: income - expenseTotal, 지출내역: expenseDetail })
+      const detail = monthExpenses.map((e) => `${e.name}${e.quantity > 1 ? ` ${e.quantity}개` : ''} ${formatPrice(e.amount)}`).join(', ')
+      ws5.addRow({ month: `${m + 1}월`, income, expense: expenseTotal, diff: income - expenseTotal, detail })
     }
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(accountingRows), '회계보고')
+    styleHeaders(ws5)
 
-    // Sheet 6: 주간수입상세 (주일별)
+    // Sheet 6: 주간수입상세
+    const ws6 = wb.addWorksheet('주간수입상세')
+    ws6.columns = [
+      { header: '날짜', key: 'date', width: 14 },
+      { header: '현금', key: 'cash', width: 12 },
+      { header: '이체', key: 'transfer', width: 12 },
+      { header: '미결제', key: 'credit', width: 12 },
+      { header: '선불', key: 'prepaid', width: 12 },
+      { header: '실매출', key: 'realTotal', width: 12 },
+      { header: '주문수', key: 'count', width: 8 },
+    ]
     const sundayMap = new Map<string, { cash: number; transfer: number; credit: number; prepaid: number; total: number; count: number }>()
     allOrders.forEach((o) => {
       const d = new Date(o.created_at)
-      if (d.getDay() !== 0) return // 일요일만
+      if (d.getDay() !== 0) return
       const key = d.toLocaleDateString('ko-KR')
       const existing = sundayMap.get(key) || { cash: 0, transfer: 0, credit: 0, prepaid: 0, total: 0, count: 0 }
       existing.count++
@@ -403,21 +465,45 @@ export default function DashboardPage() {
       })
       sundayMap.set(key, existing)
     })
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      Array.from(sundayMap.entries()).map(([date, v]) => ({ 날짜: date, 현금: v.cash, 이체: v.transfer, 미결제: v.credit, 선불: v.prepaid, 합계: v.total, 주문수: v.count }))
-    ), '주간수입상세')
+    sundayMap.forEach((v, date) => {
+      const row = ws6.addRow({ date, cash: v.cash, transfer: v.transfer, credit: v.credit, prepaid: v.prepaid, realTotal: v.total - v.prepaid, count: v.count })
+      row.getCell('transfer').fill = yellowFill
+    })
+    styleHeaders(ws6)
 
     // Sheet 7: 미결제현황
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      memberBalances.filter((m) => m.credit_balance > 0).map((m) => ({ 이름: m.name, 부서: m.department || '', 미결제잔액: m.credit_balance }))
-    ), '미결제현황')
+    const ws7 = wb.addWorksheet('미결제현황')
+    ws7.columns = [
+      { header: '이름', key: 'name', width: 12 },
+      { header: '부서', key: 'dept', width: 12 },
+      { header: '미결제잔액', key: 'balance', width: 12 },
+    ]
+    memberBalances.filter((m) => m.credit_balance > 0).forEach((m) =>
+      ws7.addRow({ name: m.name, dept: m.department || '', balance: m.credit_balance })
+    )
+    styleHeaders(ws7)
 
     // Sheet 8: 선불잔액현황
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      memberBalances.filter((m) => m.prepaid_balance > 0).map((m) => ({ 이름: m.name, 부서: m.department || '', 선불잔액: m.prepaid_balance }))
-    ), '선불잔액현황')
+    const ws8 = wb.addWorksheet('선불잔액현황')
+    ws8.columns = [
+      { header: '이름', key: 'name', width: 12 },
+      { header: '부서', key: 'dept', width: 12 },
+      { header: '선불잔액', key: 'balance', width: 12 },
+    ]
+    memberBalances.filter((m) => m.prepaid_balance > 0).forEach((m) =>
+      ws8.addRow({ name: m.name, dept: m.department || '', balance: m.prepaid_balance })
+    )
+    styleHeaders(ws8)
 
-    XLSX.writeFile(wb, `로뎀나무_정산_${new Date().toISOString().split('T')[0]}.xlsx`)
+    // Download
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `로뎀나무_정산_${new Date().toISOString().split('T')[0]}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   // PIN screen
@@ -453,6 +539,68 @@ export default function DashboardPage() {
       <div className="p-4">
         {loading ? (
           <div className="text-center py-12 text-rodem-text-sub">불러오는 중...</div>
+
+        ) : tab === '전체' ? (
+          <>
+            <div className="bg-gradient-to-br from-[#4a4541] to-[#3a3632] text-white p-4 rounded-rodem-sm mb-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="text-sm opacity-70 mb-1">전체 주문</div>
+                  <div className="text-[26px] font-bold">{allOrders.length}건</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm opacity-70 mb-1">총 매출</div>
+                  <div className="text-[26px] font-bold">{formatPrice(allOrders.reduce((s, o) => s + o.total_price, 0))}</div>
+                </div>
+              </div>
+              <div className="flex gap-4 mt-3 text-sm">
+                <span className="text-green-400">완료 {allOrders.filter(o => o.status === 'completed').length}건</span>
+                <span className="text-yellow-400">대기 {allOrders.filter(o => o.status === 'pending').length}건</span>
+                <span className="text-red-400">반려 {allOrders.filter(o => o.status === 'cancelled').length}건</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
+              {allOrders.map((o) => {
+                const statusLabel = o.status === 'completed' ? '완료' : o.status === 'pending' ? '대기' : '반려'
+                const statusColor = o.status === 'completed' ? 'bg-rodem-green-light text-rodem-green' : o.status === 'pending' ? 'bg-rodem-gold-light text-rodem-gold' : 'bg-red-50 text-rodem-red'
+                const isCancelled = o.status === 'cancelled'
+                return (
+                  <div key={o.id} className={cn(
+                    'flex items-center justify-between p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light',
+                    isCancelled && 'opacity-50'
+                  )}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-semibold text-rodem-text">
+                          {(o.members as unknown as { name: string })?.name || '알수없음'}
+                        </span>
+                        <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full', statusColor)}>{statusLabel}</span>
+                      </div>
+                      <div className="text-sm text-rodem-text-sub">
+                        {new Date(o.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                        {' '}
+                        {new Date(o.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                        {' · '}
+                        {o.order_items?.map((i) => `${(i.menu_items as unknown as { name: string })?.name || ''}x${i.quantity}`).join(', ')}
+                      </div>
+                      <div className="text-xs text-rodem-text-sub mt-0.5">
+                        {o.order_payments?.map(p => METHOD_LABELS[p.method]).join('+') || ''}
+                        {isCancelled && <span className="ml-1 text-rodem-red font-bold">(반려)</span>}
+                      </div>
+                    </div>
+                    <div className={cn('text-base font-bold', isCancelled ? 'text-rodem-text-sub line-through' : 'text-rodem-text')}>
+                      {formatPrice(o.total_price)}
+                    </div>
+                  </div>
+                )
+              })}
+              {allOrders.length === 0 && (
+                <div className="text-center py-12 text-rodem-text-sub text-base">주문 내역이 없습니다</div>
+              )}
+            </div>
+          </>
+
         ) : tab === 'Export' ? (
           <div className="text-center py-12">
             <div className="text-4xl mb-4">📥</div>
@@ -629,11 +777,11 @@ export default function DashboardPage() {
             <div className="bg-gradient-to-br from-[#4a4541] to-[#3a3632] text-white p-4 rounded-rodem-sm mb-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="text-sm opacity-70 mb-1">총 매출</div>
-                  <div className="text-[26px] font-bold">{formatPrice(summary.total)}</div>
+                  <div className="text-sm opacity-70 mb-1">실 매출 (선불 제외)</div>
+                  <div className="text-[26px] font-bold">{formatPrice(summary.total - (summary.prepaid || 0))}</div>
                   {(prevSummary.total > 0 || summary.total > 0) && (
-                    <div className={cn('text-sm font-semibold mt-1', summary.total >= prevSummary.total ? 'text-green-400' : 'text-red-400')}>
-                      {tab === '주간' ? '전주' : '전월'} 대비 {calcChange(summary.total, prevSummary.total)}
+                    <div className={cn('text-sm font-semibold mt-1', (summary.total - summary.prepaid) >= (prevSummary.total - prevSummary.prepaid) ? 'text-green-400' : 'text-red-400')}>
+                      {tab === '오늘' ? '어제' : '전월'} 대비 {calcChange(summary.total - summary.prepaid, prevSummary.total - prevSummary.prepaid)}
                     </div>
                   )}
                 </div>
@@ -641,7 +789,7 @@ export default function DashboardPage() {
                   <div className="text-sm opacity-70 mb-1">주문 수</div>
                   <div className="text-[26px] font-bold">{summary.count}건</div>
                   {summary.count > 0 && (
-                    <div className="text-sm opacity-70 mt-1">평균 {formatPrice(Math.round(summary.total / summary.count))}</div>
+                    <div className="text-sm opacity-70 mt-1">총 주문 {formatPrice(summary.total)}</div>
                   )}
                 </div>
               </div>

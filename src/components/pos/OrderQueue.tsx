@@ -26,8 +26,9 @@ type QueueOrder = {
   total_price: number
   created_at: string
   completed_at: string | null
+  scheduled_for: string | null
   members: { name: string } | null
-  order_items: { quantity: number; menu_items: { name: string } | null }[]
+  order_items: { quantity: number; menu_items: { name: string } | null; options: { shot?: string } | null }[]
   order_payments: QueuePayment[]
 }
 
@@ -47,13 +48,17 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
 
     const { data } = await supabase
       .from('orders')
-      .select('id, order_number, status, total_price, created_at, completed_at, members(name), order_items(quantity, menu_items(name)), order_payments(id, method, amount, transfer_status)')
+      .select('id, order_number, status, total_price, created_at, completed_at, scheduled_for, members(name), order_items(quantity, menu_items(name), options), order_payments(id, method, amount, transfer_status)')
       .gte('created_at', todayStart)
       .order('created_at', { ascending: true })
-      .limit(30)
+      .limit(50)
 
     if (data) {
-      const newOrders = data as unknown as QueueOrder[]
+      const now = new Date().toISOString()
+      const newOrders = (data as unknown as QueueOrder[]).filter((o) => {
+        if (!o.scheduled_for) return true
+        return o.scheduled_for <= now || o.status === 'completed' || o.status === 'cancelled'
+      })
       setOrders(newOrders)
 
       const prev = prevOrderMapRef.current
@@ -207,14 +212,24 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
                 <span className="text-base text-rodem-text-sub ml-2">
                   {new Date(order.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
+                {order.scheduled_for && (
+                  <span className="text-sm text-rodem-purple font-semibold ml-2">
+                    🕐 {new Date(order.scheduled_for).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 예약
+                  </span>
+                )}
               </div>
               <div className="text-[3rem] font-bold text-black leading-tight mb-2">
-                {order.order_items?.map((item, i) => (
-                  <span key={i}>
-                    {(item.menu_items as unknown as { name: string })?.name} x{item.quantity}
-                    {i < order.order_items.length - 1 ? ', ' : ''}
-                  </span>
-                ))}
+                {order.order_items?.map((item, i) => {
+                  const menuName = (item.menu_items as unknown as { name: string })?.name || ''
+                  const shot = (item.options as { shot?: string } | null)?.shot
+                  const shotLabel = shot && shot !== '보통' ? ` (${shot})` : ''
+                  return (
+                    <span key={i}>
+                      {menuName}{shotLabel} x{item.quantity}
+                      {i < order.order_items.length - 1 ? ', ' : ''}
+                    </span>
+                  )
+                })}
               </div>
               <div className="text-base font-bold text-rodem-text mb-2">
                 {formatPrice(order.total_price)}

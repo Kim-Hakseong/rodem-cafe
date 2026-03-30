@@ -27,10 +27,21 @@ const EMOJI_MAP: Record<string, string> = {
   '커피': '☕', '음료': '🧃', '차': '🍵', '과자': '🍪', '기타': '🧊',
 }
 
+const SHOT_OPTIONS = ['보통', '연하게', '진하게'] as const
+
+function isAmericano(item: MenuItem): boolean {
+  return item.name.includes('아메리카노')
+}
+
+function cartKey(id: string, shot?: string): string {
+  return shot && shot !== '보통' ? `${id}__${shot}` : id
+}
+
 export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }: MenuSelectProps) {
   const [menus, setMenus] = useState<MenuItem[]>([])
   const [category, setCategory] = useState('전체')
   const [loading, setLoading] = useState(true)
+  const [shotModal, setShotModal] = useState<MenuItem | null>(null)
 
   useEffect(() => {
     const fetchMenus = async () => {
@@ -51,26 +62,56 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
     return menus.filter((m) => m.category === category)
   }, [menus, category])
 
-  const addToCart = (item: MenuItem) => {
+  const addToCartWithOptions = (item: MenuItem, shot?: string) => {
+    const key = cartKey(item.id, shot)
+    const shotLabel = shot && shot !== '보통' ? ` (${shot})` : ''
     setCart((prev) => {
-      const idx = prev.findIndex((c) => c.id === item.id)
+      const idx = prev.findIndex((c) => cartKey(c.id, c.options?.shot) === key)
       if (idx >= 0) {
         return prev.map((c, i) => i === idx ? { ...c, qty: c.qty + 1 } : c)
       }
-      return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1, temp_type: item.temp_type }]
+      return [...prev, {
+        id: item.id,
+        name: item.name + shotLabel,
+        price: item.price,
+        qty: 1,
+        temp_type: item.temp_type,
+        options: shot && shot !== '보통' ? { shot } : undefined,
+      }]
     })
   }
 
-  const removeFromCart = (id: string) => {
+  const addToCart = (item: MenuItem) => {
+    if (isAmericano(item)) {
+      setShotModal(item)
+      return
+    }
+    addToCartWithOptions(item)
+  }
+
+  const handleShotSelect = (shot: string) => {
+    if (shotModal) {
+      addToCartWithOptions(shotModal, shot)
+      setShotModal(null)
+    }
+  }
+
+  const removeFromCart = (key: string) => {
     setCart((prev) => {
-      const idx = prev.findIndex((c) => c.id === id)
+      const idx = prev.findIndex((c) => cartKey(c.id, c.options?.shot) === key)
       if (idx < 0) return prev
-      if (prev[idx].qty === 1) return prev.filter((c) => c.id !== id)
+      if (prev[idx].qty === 1) return prev.filter((_, i) => i !== idx)
       return prev.map((c, i) => i === idx ? { ...c, qty: c.qty - 1 } : c)
     })
   }
 
-  const getCartQty = (id: string) => cart.find((c) => c.id === id)?.qty || 0
+  const getCartQty = (id: string) => {
+    return cart.filter((c) => c.id === id).reduce((sum, c) => sum + c.qty, 0)
+  }
+
+  const getCartItems = (id: string) => {
+    return cart.filter((c) => c.id === id)
+  }
 
   if (loading) {
     return (
@@ -105,6 +146,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
         <div className="grid grid-cols-2 gap-3">
           {filtered.map((item) => {
             const qty = getCartQty(item.id)
+            const itemsInCart = getCartItems(item.id)
             const emoji = EMOJI_MAP[item.category] || '📦'
             return (
               <div
@@ -117,7 +159,6 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
                   qty === 0 ? 'cursor-pointer hover:-translate-y-[2px] hover:shadow-md' : ''
                 )}
               >
-                {/* 이미지 or 이모지 — 2배 크기 */}
                 {item.image_url ? (
                   <img
                     src={item.image_url}
@@ -128,27 +169,43 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
                   <div className="text-[52px] mb-2">{emoji}</div>
                 )}
 
-                {/* 메뉴명 — 2배 크기 */}
                 <div className="font-bold text-[28px] text-rodem-text leading-tight">{item.name}</div>
 
-                {/* 가격 or 수량 조절 */}
                 {qty === 0 ? (
                   <div className="text-xl text-rodem-text-sub mt-1">{formatPrice(item.price)}</div>
                 ) : (
-                  <div className="flex items-center justify-center gap-4 mt-2">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeFromCart(item.id) }}
-                      className="w-10 h-10 rounded-full bg-rodem-border-light text-rodem-text text-xl font-bold flex items-center justify-center cursor-pointer border-none active:bg-rodem-border"
-                    >
-                      -
-                    </button>
-                    <span className="text-2xl font-bold text-rodem-gold min-w-[2ch] text-center">{qty}</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); addToCart(item) }}
-                      className="w-10 h-10 rounded-full bg-rodem-gold text-white text-xl font-bold flex items-center justify-center cursor-pointer border-none active:bg-rodem-gold/80"
-                    >
-                      +
-                    </button>
+                  <div className="mt-2 space-y-1">
+                    {itemsInCart.map((ci) => {
+                      const key = cartKey(ci.id, ci.options?.shot)
+                      return (
+                        <div key={key} className="flex items-center justify-center gap-3">
+                          {ci.options?.shot && (
+                            <span className="text-sm text-rodem-gold font-semibold">{ci.options.shot}</span>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeFromCart(key) }}
+                            className="w-9 h-9 rounded-full bg-rodem-border-light text-rodem-text text-lg font-bold flex items-center justify-center cursor-pointer border-none active:bg-rodem-border"
+                          >
+                            -
+                          </button>
+                          <span className="text-xl font-bold text-rodem-gold min-w-[2ch] text-center">{ci.qty}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); addToCartWithOptions(item, ci.options?.shot || '보통') }}
+                            className="w-9 h-9 rounded-full bg-rodem-gold text-white text-lg font-bold flex items-center justify-center cursor-pointer border-none active:bg-rodem-gold/80"
+                          >
+                            +
+                          </button>
+                        </div>
+                      )
+                    })}
+                    {isAmericano(item) && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShotModal(item) }}
+                        className="w-full text-sm text-rodem-gold font-semibold bg-rodem-gold-light rounded-lg py-1 cursor-pointer border-none mt-1"
+                      >
+                        + 다른 옵션 추가
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -157,24 +214,27 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
         </div>
       </div>
 
-      {/* Cart bar — 높이 확대 */}
+      {/* Cart bar */}
       {cart.length > 0 && (
         <div className="border-t border-rodem-border-light bg-white p-5 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
           <div className="flex flex-wrap gap-2 mb-4">
-            {cart.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-2 bg-rodem-gold-light px-4 py-2 rounded-full"
-              >
-                <span className="font-bold text-black text-[3rem] leading-tight">{item.name} x{item.qty}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeFromCart(item.id) }}
-                  className="text-rodem-text-sub hover:text-rodem-red text-2xl cursor-pointer bg-transparent border-none"
+            {cart.map((item) => {
+              const key = cartKey(item.id, item.options?.shot)
+              return (
+                <div
+                  key={key}
+                  className="flex items-center gap-2 bg-rodem-gold-light px-4 py-2 rounded-full"
                 >
-                  ✕
-                </button>
-              </div>
-            ))}
+                  <span className="font-bold text-black text-[3rem] leading-tight">{item.name} x{item.qty}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeFromCart(key) }}
+                    className="text-rodem-text-sub hover:text-rodem-red text-2xl cursor-pointer bg-transparent border-none"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )
+            })}
           </div>
           <div className="flex items-center justify-between">
             <div className="text-[3rem] font-bold text-rodem-text leading-tight">
@@ -206,6 +266,41 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
           >
             ← 이전
           </button>
+        </div>
+      )}
+
+      {/* Shot option modal */}
+      {shotModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShotModal(null)}>
+          <div className="absolute inset-0 bg-[rgba(74,69,65,0.4)] backdrop-blur-[10px]" />
+          <div className="relative bg-gradient-to-br from-[#fefcf9] to-[#f8f4ec] rounded-rodem p-6 max-w-sm w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold text-rodem-text mb-2">☕ {shotModal.name}</h3>
+            <p className="text-base text-rodem-text-sub mb-4">샷 농도를 선택하세요</p>
+            <div className="flex flex-col gap-2">
+              {SHOT_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => handleShotSelect(opt)}
+                  className={cn(
+                    'w-full py-4 rounded-rodem-sm border-2 text-lg font-bold cursor-pointer transition-all',
+                    opt === '보통'
+                      ? 'bg-rodem-gold-light border-rodem-gold text-rodem-gold'
+                      : opt === '연하게'
+                        ? 'bg-blue-50 border-blue-400 text-blue-600'
+                        : 'bg-red-50 border-red-400 text-red-600'
+                  )}
+                >
+                  {opt === '보통' ? '☕ 보통' : opt === '연하게' ? '💧 연하게 (샷 적게)' : '💪 진하게 (샷 추가)'}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShotModal(null)}
+              className="w-full mt-3 py-2 text-rodem-text-sub text-base cursor-pointer bg-transparent border-none"
+            >
+              취소
+            </button>
+          </div>
         </div>
       )}
     </div>

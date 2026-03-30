@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { createSupabaseBrowser } from '@/lib/supabase/client'
 import { CHOSUNG_LIST, DEPARTMENTS } from '@/lib/constants'
 import { getFirstChosung, cn, formatPrice } from '@/lib/utils'
@@ -142,26 +142,47 @@ export default function MembersPage() {
     showToast(`${m.name} QR 다운로드`, 'success')
   }
 
-  const handleExcelDownload = () => {
-    const ws = XLSX.utils.json_to_sheet(members.map((m) => ({ 이름: m.name, 연락처: m.phone ?? '', 메모: m.note ?? '', 선불잔액: m.prepaid_balance ?? 0 })))
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, '성도목록')
-    XLSX.writeFile(wb, `로뎀카페_성도목록_${new Date().toLocaleDateString('ko-KR').replace(/\. /g, '-').replace('.', '')}.xlsx`)
+  const handleExcelDownload = async () => {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('성도목록')
+    ws.columns = [
+      { header: '이름', key: 'name', width: 12 },
+      { header: '연락처', key: 'phone', width: 16 },
+      { header: '메모', key: 'note', width: 20 },
+      { header: '선불잔액', key: 'prepaid', width: 12 },
+    ]
+    members.forEach((m) => ws.addRow({ name: m.name, phone: m.phone ?? '', note: m.note ?? '', prepaid: m.prepaid_balance ?? 0 }))
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `로뎀카페_성도목록_${new Date().toLocaleDateString('ko-KR').replace(/\. /g, '-').replace('.', '')}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
     showToast('엑셀 다운로드 완료', 'success')
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const wb = XLSX.read(new Uint8Array(ev.target?.result as ArrayBuffer), { type: 'array' })
-      const rows: UploadRow[] = (XLSX.utils.sheet_to_json<Record<string, string>>(wb.Sheets[wb.SheetNames[0]]))
-        .map((r) => ({ name: String(r['이름'] ?? r['name'] ?? '').trim(), phone: String(r['연락처'] ?? r['phone'] ?? '').trim(), note: String(r['메모'] ?? r['note'] ?? '').trim() }))
-        .filter((r) => r.name)
-      setUploadRows(rows); setUploadOpen(true)
-    }
-    reader.readAsArrayBuffer(file)
+    const buffer = await file.arrayBuffer()
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(buffer)
+    const ws = wb.worksheets[0]
+    if (!ws) return
+    const rows: UploadRow[] = []
+    const headerRow = ws.getRow(1)
+    const headers: string[] = []
+    headerRow.eachCell((cell) => headers.push(String(cell.value ?? '')))
+    ws.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return
+      const vals: Record<string, string> = {}
+      row.eachCell((cell, colNumber) => { vals[headers[colNumber - 1]] = String(cell.value ?? '') })
+      const name = (vals['이름'] ?? vals['name'] ?? '').trim()
+      if (name) rows.push({ name, phone: (vals['연락처'] ?? vals['phone'] ?? '').trim(), note: (vals['메모'] ?? vals['note'] ?? '').trim() })
+    })
+    setUploadRows(rows); setUploadOpen(true)
     e.target.value = ''
   }
 

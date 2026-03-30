@@ -3,7 +3,7 @@ import { createSupabaseAdmin } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { memberId, items, payments, totalPrice, createdBy } = await request.json()
+    const { memberId, items, payments, totalPrice, createdBy, scheduledFor } = await request.json()
 
     if (!memberId || !items?.length || !payments?.length || !totalPrice) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
         status: 'pending',
         order_number: orderNumber,
         created_by: createdBy || 'staff',
+        scheduled_for: scheduledFor || null,
       })
       .select('id')
       .single()
@@ -39,11 +40,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert order items
-    const orderItems = items.map((item: { menuItemId: string; quantity: number; unitPrice: number }) => ({
+    const orderItems = items.map((item: { menuItemId: string; quantity: number; unitPrice: number; options?: Record<string, string> | null }) => ({
       order_id: order.id,
       menu_item_id: item.menuItemId,
       quantity: item.quantity,
       unit_price: item.unitPrice,
+      options: item.options || null,
     }))
 
     const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // If prepaid payment, deduct balance
     const prepaidPayment = payments.find((p: { method: string }) => p.method === 'prepaid')
-    if (prepaidPayment) {
+    if (prepaidPayment && prepaidPayment.amount > 0) {
       const { data: member } = await supabase
         .from('members')
         .select('prepaid_balance')
@@ -74,9 +76,11 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (member) {
+        const currentBalance = member.prepaid_balance ?? 0
+        const newBalance = Math.max(0, currentBalance - prepaidPayment.amount)
         await supabase
           .from('members')
-          .update({ prepaid_balance: (member.prepaid_balance || 0) - prepaidPayment.amount })
+          .update({ prepaid_balance: newBalance })
           .eq('id', memberId)
       }
     }

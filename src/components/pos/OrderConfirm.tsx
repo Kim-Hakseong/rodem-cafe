@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { formatPrice } from '@/lib/utils'
+import { useState, useMemo } from 'react'
+import { formatPrice, cn } from '@/lib/utils'
 import { PAYMENT_METHODS } from '@/lib/constants'
 import type { SelectedMember, CartItem, PaymentInfo } from '@/app/pos/page'
 
@@ -15,8 +15,25 @@ interface OrderConfirmProps {
   mode: 'staff' | 'customer'
 }
 
+function generateTimeSlots(): string[] {
+  const now = new Date()
+  const slots: string[] = []
+  const start = new Date(now)
+  start.setMinutes(Math.ceil(start.getMinutes() / 5) * 5 + 5, 0, 0)
+
+  for (let i = 0; i < 24; i++) {
+    const slot = new Date(start.getTime() + i * 5 * 60 * 1000)
+    slots.push(slot.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }))
+  }
+  return slots
+}
+
 export default function OrderConfirm({ member, cart, payments, cartTotal, onComplete, onBack, mode }: OrderConfirmProps) {
   const [submitting, setSubmitting] = useState(false)
+  const [isReservation, setIsReservation] = useState(false)
+  const [reservationTime, setReservationTime] = useState('')
+
+  const timeSlots = useMemo(() => generateTimeSlots(), [])
 
   const getPaymentLabel = (method: string) => {
     return PAYMENT_METHODS.find((p) => p.id === method)?.label || method
@@ -28,9 +45,25 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
 
   const handleSubmit = async () => {
     if (submitting) return
+    if (isReservation && !reservationTime) {
+      alert('예약 시간을 선택해주세요.')
+      return
+    }
     setSubmitting(true)
 
     try {
+      let scheduledFor: string | null = null
+      if (isReservation && reservationTime) {
+        const today = new Date()
+        const [hourStr, minuteStr] = reservationTime.replace('오전 ', '').replace('오후 ', '').split(':')
+        let hour = parseInt(hourStr)
+        const minute = parseInt(minuteStr)
+        if (reservationTime.includes('오후') && hour !== 12) hour += 12
+        if (reservationTime.includes('오전') && hour === 12) hour = 0
+        today.setHours(hour, minute, 0, 0)
+        scheduledFor = today.toISOString()
+      }
+
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,6 +73,7 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
             menuItemId: c.id,
             quantity: c.qty,
             unitPrice: c.price,
+            options: c.options || null,
           })),
           payments: payments.map((p) => ({
             method: p.method,
@@ -47,6 +81,7 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
           })),
           totalPrice: cartTotal,
           createdBy: mode,
+          scheduledFor,
         }),
       })
 
@@ -75,8 +110,8 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
 
         {/* Items */}
         <div className="mb-4 pb-4 border-b border-rodem-border-light">
-          {cart.map((item) => (
-            <div key={item.id} className="flex justify-between py-1.5">
+          {cart.map((item, idx) => (
+            <div key={idx} className="flex justify-between py-1.5">
               <span className="text-base text-rodem-text">
                 {item.name} × {item.qty}
               </span>
@@ -108,6 +143,50 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
         </div>
       </div>
 
+      {/* Reservation toggle */}
+      <div className="bg-white rounded-rodem-sm border border-rodem-border-light p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-bold text-base text-rodem-text">🕐 예약 주문</div>
+            <div className="text-sm text-rodem-text-sub mt-0.5">지정 시간에 대기열에 표시됩니다</div>
+          </div>
+          <button
+            onClick={() => { setIsReservation(!isReservation); setReservationTime('') }}
+            className={cn(
+              'w-14 h-7 rounded-full relative cursor-pointer border-none flex-shrink-0 transition-colors',
+              isReservation ? 'bg-rodem-gold' : 'bg-rodem-border'
+            )}
+          >
+            <span className={cn(
+              'absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm transition-all duration-200',
+              isReservation ? 'left-[30px]' : 'left-0.5'
+            )} />
+          </button>
+        </div>
+
+        {isReservation && (
+          <div className="mt-3">
+            <div className="text-sm text-rodem-text-sub mb-2">시간 선택</div>
+            <div className="grid grid-cols-4 gap-1.5 max-h-40 overflow-y-auto">
+              {timeSlots.map((slot) => (
+                <button
+                  key={slot}
+                  onClick={() => setReservationTime(slot)}
+                  className={cn(
+                    'py-2 rounded-lg text-sm font-semibold cursor-pointer border transition-all',
+                    reservationTime === slot
+                      ? 'bg-rodem-gold text-white border-rodem-gold'
+                      : 'bg-rodem-card text-rodem-text border-rodem-border-light'
+                  )}
+                >
+                  {slot}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="flex gap-3">
         <button
           onClick={onBack}
@@ -120,7 +199,7 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
           disabled={submitting}
           className="flex-[2] py-3.5 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold text-base cursor-pointer shadow-[0_6px_24px_rgba(201,162,39,0.2)] disabled:opacity-50"
         >
-          {submitting ? '처리 중...' : '✅ 주문 완료'}
+          {submitting ? '처리 중...' : isReservation ? `🕐 ${reservationTime || '시간 선택'} 예약` : '✅ 주문 완료'}
         </button>
       </div>
     </div>
