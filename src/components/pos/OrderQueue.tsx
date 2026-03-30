@@ -257,7 +257,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
                         onClick={() => handleTransferAction(transferPayment.id, 'unpaid')}
                         className="flex-1 py-2 rounded-[8px] bg-rodem-orange-light border border-rodem-orange text-rodem-orange text-base font-bold cursor-pointer"
                       >
-                        미납 (외상)
+                        미결제 처리
                       </button>
                     </div>
                   )}
