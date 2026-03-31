@@ -159,9 +159,9 @@ export default function AdminPage() {
 
             {/* 운영시간 설정 */}
             <div className="p-4 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
-              <div className="font-bold text-base text-rodem-text mb-1">🕐 운영시간 설정</div>
+              <div className="font-bold text-base text-rodem-text mb-1">🕐 마감시간 설정</div>
               <div className="text-sm text-rodem-text-sub mb-3">
-                고객 주문 페이지는 운영시간 외 마감됩니다
+                설정 시간 동안 고객 주문 페이지가 마감됩니다
               </div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex-1">

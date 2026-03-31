@@ -97,7 +97,7 @@ function POSPageInner() {
         const nowMin = now.getHours() * 60 + now.getMinutes()
         const openMin = oh * 60 + om
         const closeMin = ch * 60 + cm
-        setIsClosed(nowMin < openMin || nowMin >= closeMin)
+        setIsClosed(nowMin >= openMin && nowMin < closeMin)
       } catch { /* silent */ }
     }
     checkHours()
@@ -170,7 +170,7 @@ function POSPageInner() {
         <h2 className="text-[28px] font-bold mb-2 text-rodem-text relative z-10">주문 마감</h2>
         <p className="text-lg text-rodem-text-sub mb-2 relative z-10">현재 주문 시간이 아닙니다</p>
         <div className="bg-rodem-gold-light px-6 py-3 rounded-rodem-sm mb-8 relative z-10">
-          <span className="text-lg font-bold text-rodem-gold">운영시간: {operatingHours.open} ~ {operatingHours.close}</span>
+          <span className="text-lg font-bold text-rodem-gold">마감시간: {operatingHours.open} ~ {operatingHours.close}</span>
         </div>
         <button
           onClick={() => router.push('/')}
