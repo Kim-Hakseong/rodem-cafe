@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import PinInput from '@/components/ui/PinInput'
 import Header from '@/components/ui/Header'
 import StepIndicator from '@/components/ui/StepIndicator'
@@ -10,11 +10,12 @@ import MemberSelect from '@/components/pos/MemberSelect'
 import MenuSelect from '@/components/pos/MenuSelect'
 import PaymentSelect from '@/components/pos/PaymentSelect'
 import OrderConfirm from '@/components/pos/OrderConfirm'
-import TodaySummary from '@/components/pos/TodaySummary'
-import CreditManager from '@/components/pos/CreditManager'
 import OrderQueue from '@/components/pos/OrderQueue'
-import PrepaidAdjust from '@/components/pos/PrepaidAdjust'
-import { useRouter } from 'next/navigation'
+import BottomTabBar, { type PosTab } from '@/components/pos/BottomTabBar'
+import TodaySummaryInline from '@/components/pos/TodaySummaryInline'
+import CreditManagerInline from '@/components/pos/CreditManagerInline'
+import AdminPanel from '@/components/pos/AdminPanel'
+import { useAuth } from '@/lib/auth-context'
 
 export type CartItem = {
   id: string
@@ -53,20 +54,20 @@ function POSPageInner() {
   const mode = searchParams.get('mode') === 'customer' ? 'customer' : 'staff' as 'staff' | 'customer'
   const isCustomer = mode === 'customer'
 
-  const [authenticated, setAuthenticated] = useState(isCustomer)
+  const { staffAuthed, authenticateStaff, logout } = useAuth()
+  const authenticated = isCustomer || staffAuthed
+
   const [isClosed, setIsClosed] = useState(false)
   const [operatingHours, setOperatingHours] = useState({ open: '10:35', close: '12:30' })
+  const [activeTab, setActiveTab] = useState<PosTab>('order')
   const [step, setStep] = useState(0)
   const [selectedMember, setSelectedMember] = useState<SelectedMember | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [payments, setPayments] = useState<PaymentInfo>([])
-  const [showSummary, setShowSummary] = useState(false)
-  const [showCredit, setShowCredit] = useState(false)
   const [queueOpen, setQueueOpen] = useState(false)
   const [orderRefresh, setOrderRefresh] = useState(0)
-  const [showPrepaidAdjust, setShowPrepaidAdjust] = useState(false)
 
-  // PIN states
+  // PIN lock states (local — security feature)
   const [pinError, setPinError] = useState(false)
   const [attempts, setAttempts] = useState(0)
   const [locked, setLocked] = useState(false)
@@ -105,45 +106,35 @@ function POSPageInner() {
     return () => clearInterval(interval)
   }, [isCustomer])
 
-  // PIN verification (staff only)
+  // PIN verification (staff only, with lock protection)
   const handlePinComplete = useCallback(async (pin: string) => {
     if (locked) return
 
-    try {
-      const res = await fetch('/api/pin/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin, type: 'staff' }),
-      })
-
-      if (res.ok) {
-        setAuthenticated(true)
-        setPinError(false)
-        setAttempts(0)
-      } else {
-        setPinError(true)
-        const newAttempts = attempts + 1
-        setAttempts(newAttempts)
-        if (newAttempts >= 5) {
-          setLocked(true)
-          setLockTimer(30)
-          const interval = setInterval(() => {
-            setLockTimer((prev) => {
-              if (prev <= 1) {
-                clearInterval(interval)
-                setLocked(false)
-                setAttempts(0)
-                return 0
-              }
-              return prev - 1
-            })
-          }, 1000)
-        }
-      }
-    } catch {
+    const success = await authenticateStaff(pin)
+    if (success) {
+      setPinError(false)
+      setAttempts(0)
+    } else {
       setPinError(true)
+      const newAttempts = attempts + 1
+      setAttempts(newAttempts)
+      if (newAttempts >= 5) {
+        setLocked(true)
+        setLockTimer(30)
+        const interval = setInterval(() => {
+          setLockTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(interval)
+              setLocked(false)
+              setAttempts(0)
+              return 0
+            }
+            return prev - 1
+          })
+        }, 1000)
+      }
     }
-  }, [locked, attempts])
+  }, [locked, attempts, authenticateStaff])
 
   const resetOrder = useCallback(() => {
     setStep(0)
@@ -157,6 +148,22 @@ function POSPageInner() {
     showToast('주문이 접수되었습니다!', 'success')
     resetOrder()
   }, [resetOrder, showToast])
+
+  const handleBack = useCallback(() => {
+    if (activeTab !== 'order') {
+      setActiveTab('order')
+      return
+    }
+    if (step > 0) {
+      setStep(step - 1)
+    } else if (isCustomer) {
+      router.push('/')
+    } else {
+      logout()
+      resetOrder()
+      router.push('/')
+    }
+  }, [activeTab, step, isCustomer, router, logout, resetOrder])
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0)
 
@@ -182,7 +189,7 @@ function POSPageInner() {
     )
   }
 
-  // PIN screen (staff only)
+  // PIN screen (staff only — session-based, shown only once)
   if (!authenticated) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#efebe4] via-[#e5e0d8] to-[#dedad2] relative overflow-hidden font-sans">
@@ -223,30 +230,102 @@ function POSPageInner() {
     )
   }
 
-  // Header right buttons — staff only (정산, 미결제, 고객)
+  // Tab titles for staff mode header
+  const TAB_TITLES: Record<PosTab, string> = {
+    order: '📋 주문',
+    summary: '📊 오늘 정산',
+    credit: '💰 미결제',
+    admin: '⚙️ 관리',
+  }
+
+  // Header right: queue toggle (staff) or nothing (customer)
   const headerRight = isCustomer ? undefined : (
     <div className="flex gap-1.5">
       <button
-        onClick={() => router.push('/lookup?from=staff')}
+        onClick={() => setQueueOpen(!queueOpen)}
         className="bg-white/10 border-none text-white py-1.5 px-3 rounded-lg text-base font-semibold cursor-pointer"
       >
-        👀 고객
-      </button>
-      <button
-        onClick={() => setShowSummary(true)}
-        className="bg-white/10 border-none text-white py-1.5 px-3 rounded-lg text-base font-semibold cursor-pointer"
-      >
-        📊 정산
-      </button>
-      <button
-        onClick={() => setShowCredit(true)}
-        className="bg-white/10 border-none text-white py-1.5 px-3 rounded-lg text-base font-semibold cursor-pointer"
-      >
-        💰 미결제
+        {queueOpen ? '✕ 닫기' : '📜 대기열'}
       </button>
     </div>
   )
 
+  // Customer mode: original layout without tab bar
+  if (isCustomer) {
+    return (
+      <div className="flex h-screen bg-rodem-bg font-sans">
+        <OrderQueue
+          isOpen={queueOpen}
+          onToggle={() => setQueueOpen(!queueOpen)}
+          refreshTrigger={orderRefresh}
+          mode={mode}
+        />
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header
+            title="🛒 주문 하기"
+            onBack={() => {
+              if (step > 0) setStep(step - 1)
+              else router.push('/')
+            }}
+          />
+          <StepIndicator steps={STEPS} current={step} />
+
+          <div className="flex-1 overflow-y-auto">
+            {step === 0 && (
+              <MenuSelect
+                cart={cart}
+                setCart={setCart}
+                onNext={() => setStep(1)}
+                onBack={() => router.push('/')}
+                cartTotal={cartTotal}
+              />
+            )}
+            {step === 1 && (
+              <MemberSelect
+                onSelect={(member) => {
+                  setSelectedMember(member)
+                  setStep(2)
+                }}
+              />
+            )}
+            {step === 2 && selectedMember && (
+              <PaymentSelect
+                member={selectedMember}
+                cartTotal={cartTotal}
+                onSelect={(paymentInfo) => {
+                  setPayments(paymentInfo)
+                  setStep(3)
+                }}
+                onBack={() => setStep(1)}
+                mode={mode}
+              />
+            )}
+            {step === 3 && selectedMember && (
+              <OrderConfirm
+                member={selectedMember}
+                cart={cart}
+                payments={payments}
+                cartTotal={cartTotal}
+                onComplete={handleOrderComplete}
+                onBack={() => setStep(2)}
+                mode={mode}
+              />
+            )}
+          </div>
+        </div>
+
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          isVisible={toast.show}
+          onClose={() => setToast((p) => ({ ...p, show: false }))}
+        />
+      </div>
+    )
+  }
+
+  // Staff mode: tab-based layout
   return (
     <div className="flex h-screen bg-rodem-bg font-sans">
       <OrderQueue
@@ -254,82 +333,80 @@ function POSPageInner() {
         onToggle={() => setQueueOpen(!queueOpen)}
         refreshTrigger={orderRefresh}
         mode={mode}
-        onPrepaidAdjust={() => setShowPrepaidAdjust(true)}
+        onPrepaidAdjust={() => setActiveTab('admin')}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
-          title={isCustomer ? '🛒 주문 하기' : '📋 봉사자 페이지'}
-          onBack={() => {
-            if (step > 0) {
-              setStep(step - 1)
-            } else if (isCustomer) {
-              router.push('/')
-            } else {
-              setAuthenticated(false)
-              resetOrder()
-            }
-          }}
+          title={TAB_TITLES[activeTab]}
+          onBack={handleBack}
           right={headerRight}
         />
-        <StepIndicator steps={STEPS} current={step} />
 
-        <div className="flex-1 overflow-y-auto">
-          {step === 0 && (
-            <MenuSelect
-              cart={cart}
-              setCart={setCart}
-              onNext={() => setStep(1)}
-              onBack={() => {
-                if (isCustomer) router.push('/')
-                else { setAuthenticated(false); resetOrder() }
-              }}
-              cartTotal={cartTotal}
-            />
+        {/* Order tab: show step indicator */}
+        {activeTab === 'order' && <StepIndicator steps={STEPS} current={step} />}
+
+        {/* Tab content area — pb for bottom tab bar */}
+        <div className="flex-1 overflow-y-auto pb-16">
+          {/* Order tab — 4-step flow (state preserved on tab switch) */}
+          {activeTab === 'order' && (
+            <>
+              {step === 0 && (
+                <MenuSelect
+                  cart={cart}
+                  setCart={setCart}
+                  onNext={() => setStep(1)}
+                  onBack={() => { logout(); resetOrder(); router.push('/') }}
+                  cartTotal={cartTotal}
+                />
+              )}
+              {step === 1 && (
+                <MemberSelect
+                  onSelect={(member) => {
+                    setSelectedMember(member)
+                    setStep(2)
+                  }}
+                />
+              )}
+              {step === 2 && selectedMember && (
+                <PaymentSelect
+                  member={selectedMember}
+                  cartTotal={cartTotal}
+                  onSelect={(paymentInfo) => {
+                    setPayments(paymentInfo)
+                    setStep(3)
+                  }}
+                  onBack={() => setStep(1)}
+                  mode={mode}
+                />
+              )}
+              {step === 3 && selectedMember && (
+                <OrderConfirm
+                  member={selectedMember}
+                  cart={cart}
+                  payments={payments}
+                  cartTotal={cartTotal}
+                  onComplete={handleOrderComplete}
+                  onBack={() => setStep(2)}
+                  mode={mode}
+                />
+              )}
+            </>
           )}
-          {step === 1 && (
-            <MemberSelect
-              onSelect={(member) => {
-                setSelectedMember(member)
-                setStep(2)
-              }}
-            />
-          )}
-          {step === 2 && selectedMember && (
-            <PaymentSelect
-              member={selectedMember}
-              cartTotal={cartTotal}
-              onSelect={(paymentInfo) => {
-                setPayments(paymentInfo)
-                setStep(3)
-              }}
-              onBack={() => setStep(1)}
-              mode={mode}
-            />
-          )}
-          {step === 3 && selectedMember && (
-            <OrderConfirm
-              member={selectedMember}
-              cart={cart}
-              payments={payments}
-              cartTotal={cartTotal}
-              onComplete={handleOrderComplete}
-              onBack={() => setStep(2)}
-              mode={mode}
-            />
-          )}
+
+          {/* Summary tab — inline (no modal) */}
+          {activeTab === 'summary' && <TodaySummaryInline />}
+
+          {/* Credit tab — inline (no modal) */}
+          {activeTab === 'credit' && <CreditManagerInline />}
+
+          {/* Admin tab — inline PIN + sub-tabs */}
+          {activeTab === 'admin' && <AdminPanel />}
         </div>
-      </div>
 
-      {!isCustomer && showSummary && (
-        <TodaySummary onClose={() => setShowSummary(false)} />
-      )}
-      {!isCustomer && showCredit && (
-        <CreditManager onClose={() => setShowCredit(false)} />
-      )}
-      {!isCustomer && showPrepaidAdjust && (
-        <PrepaidAdjust onClose={() => setShowPrepaidAdjust(false)} />
-      )}
+        {/* Bottom tab bar */}
+        <BottomTabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
 
       <Toast
         message={toast.message}

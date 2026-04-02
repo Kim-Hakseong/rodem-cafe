@@ -7,6 +7,7 @@ import { formatPrice, cn } from '@/lib/utils'
 import Header from '@/components/ui/Header'
 import PinInput from '@/components/ui/PinInput'
 import Modal from '@/components/ui/Modal'
+import { useAuth } from '@/lib/auth-context'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts'
@@ -76,7 +77,7 @@ function calcChange(current: number, previous: number): string {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [authenticated, setAuthenticated] = useState(false)
+  const { adminAuthed, authenticateAdmin } = useAuth()
   const [pinError, setPinError] = useState(false)
   const [tab, setTab] = useState<typeof TABS[number]>('전체')
   const [orders, setOrders] = useState<OrderData[]>([])
@@ -99,12 +100,10 @@ export default function DashboardPage() {
   const [memberBalances, setMemberBalances] = useState<MemberBalance[]>([])
 
   const handlePinComplete = useCallback(async (pin: string) => {
-    const res = await fetch('/api/pin/verify', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin, type: 'admin' }),
-    })
-    if (res.ok) { setAuthenticated(true); setPinError(false) } else setPinError(true)
-  }, [])
+    const success = await authenticateAdmin(pin)
+    if (success) setPinError(false)
+    else setPinError(true)
+  }, [authenticateAdmin])
 
   const fetchOrders = useCallback(async (start: Date, end: Date): Promise<OrderData[]> => {
     const supabase = createSupabaseBrowser()
@@ -147,7 +146,7 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    if (!authenticated) return
+    if (!adminAuthed) return
     const load = async () => {
       setLoading(true)
       const { start, end, prevStart, prevEnd } = getDateRange(tab)
@@ -161,7 +160,7 @@ export default function DashboardPage() {
     fetchExpenseItems()
     fetchExpenses()
     fetchBalances()
-  }, [authenticated, tab, fetchOrders, fetchAllOrders, fetchExpenseItems, fetchExpenses, fetchBalances])
+  }, [adminAuthed, tab, fetchOrders, fetchAllOrders, fetchExpenseItems, fetchExpenses, fetchBalances])
 
   // Time filter
   const filterByTime = useCallback((list: OrderData[]) => {
@@ -507,7 +506,7 @@ export default function DashboardPage() {
   }
 
   // PIN screen
-  if (!authenticated) {
+  if (!adminAuthed) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#efebe4] via-[#e5e0d8] to-[#dedad2] font-sans relative">
         <button onClick={() => router.push('/')} className="absolute top-4 left-4 bg-gradient-to-br from-[#f0ece4] to-[#e8e3da] border-none text-base text-rodem-text-sub cursor-pointer py-2 px-3.5 rounded-[10px]">← 뒤로</button>
@@ -621,7 +620,7 @@ export default function DashboardPage() {
               <h4 className="font-bold text-base text-rodem-text">📦 재료 품목 관리</h4>
               <button onClick={openAddExpItem} className="bg-rodem-gold border-none text-white py-1.5 px-3 rounded-[10px] text-sm font-bold cursor-pointer">+ 추가</button>
             </div>
-            <div className="space-y-1.5 mb-6 max-h-60 overflow-y-auto">
+            <div className="space-y-1.5 mb-6 max-h-[40vh] overflow-y-auto">
               {expenseItems.map((item) => (
                 <div key={item.id} className={cn(
                   'flex items-center gap-2 p-3 rounded-rodem-sm border',
@@ -653,7 +652,7 @@ export default function DashboardPage() {
             </div>
 
             {/* 지출 내역 목록 */}
-            <div className="space-y-1.5 max-h-80 overflow-y-auto">
+            <div className="space-y-1.5 max-h-[40vh] overflow-y-auto">
               {expenses.slice(0, 50).map((exp) => (
                 <div key={exp.id} className="flex items-center gap-2 p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
                   <div className="flex-1 min-w-0">
@@ -724,7 +723,7 @@ export default function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
+            <div className="space-y-2">
               {customerStats.slice(0, 30).map((c) => (
                 <div key={c.id} className="flex items-center justify-between p-3 rounded-rodem-sm bg-rodem-card border border-rodem-border-light">
                   <div>

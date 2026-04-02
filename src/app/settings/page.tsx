@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import Header from '@/components/ui/Header'
 import PinInput from '@/components/ui/PinInput'
 import Toast from '@/components/ui/Toast'
+import { useAuth } from '@/lib/auth-context'
 
 type Tab = 'change' | 'recover' | 'email'
 type ToastState = { show: boolean; message: string; type: 'success' | 'error' | 'info' }
@@ -250,7 +251,7 @@ function ResetLink({ onClick, label = '처음부터 다시' }: { onClick: () => 
 
 export default function SettingsPage() {
   const router = useRouter()
-  const [authenticated, setAuthenticated] = useState(false)
+  const { adminAuthed, authenticateAdmin } = useAuth()
   const [pinError, setPinError] = useState(false)
   const [tab, setTab] = useState<Tab>('change')
   const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'info' })
@@ -260,15 +261,12 @@ export default function SettingsPage() {
   }, [])
 
   const handleGatePin = useCallback(async (pin: string) => {
-    const res = await fetch('/api/pin/verify', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin, type: 'admin' }),
-    })
-    if (res.ok) { setAuthenticated(true); setPinError(false) }
+    const success = await authenticateAdmin(pin)
+    if (success) setPinError(false)
     else setPinError(true)
-  }, [])
+  }, [authenticateAdmin])
 
-  if (!authenticated) {
+  if (!adminAuthed) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#efebe4] via-[#e5e0d8] to-[#dedad2] font-sans relative">
         <button onClick={() => router.push('/')}

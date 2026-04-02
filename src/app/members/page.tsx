@@ -10,6 +10,7 @@ import Header from '@/components/ui/Header'
 import Modal from '@/components/ui/Modal'
 import PinInput from '@/components/ui/PinInput'
 import Toast from '@/components/ui/Toast'
+import { useAuth } from '@/lib/auth-context'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,8 +61,7 @@ function MemberFormFields({ form, onChange }: { form: MemberForm; onChange: (f: 
 export default function MembersPage() {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
-
-  const [authenticated, setAuthenticated] = useState(false)
+  const { adminAuthed, authenticateAdmin } = useAuth()
   const [pinError, setPinError] = useState(false)
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(false)
@@ -88,12 +88,13 @@ export default function MembersPage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { if (authenticated) fetchMembers() }, [authenticated, fetchMembers])
+  useEffect(() => { if (adminAuthed) fetchMembers() }, [adminAuthed, fetchMembers])
 
   const handlePin = useCallback(async (pin: string) => {
-    const res = await fetch('/api/pin/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin, type: 'admin' }) })
-    if (res.ok) { setAuthenticated(true); setPinError(false) } else setPinError(true)
-  }, [])
+    const success = await authenticateAdmin(pin)
+    if (success) setPinError(false)
+    else setPinError(true)
+  }, [authenticateAdmin])
 
   const filtered = useMemo(() => members.filter((m) => {
     if (search) return m.name.includes(search)
@@ -198,7 +199,7 @@ export default function MembersPage() {
 
   // ── PIN screen ────────────────────────────────────────────────────────────
 
-  if (!authenticated) return (
+  if (!adminAuthed) return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#efebe4] via-[#e5e0d8] to-[#dedad2] font-sans relative">
       <button onClick={() => router.push('/')} className="absolute top-4 left-4 bg-gradient-to-br from-[#f0ece4] to-[#e8e3da] border-none text-base text-rodem-text-sub cursor-pointer py-2 px-3.5 rounded-[10px]">← 뒤로</button>
       <div className="text-[42px] mb-4">👥</div>

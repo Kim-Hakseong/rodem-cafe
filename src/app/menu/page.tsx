@@ -9,6 +9,7 @@ import Header from '@/components/ui/Header'
 import Modal from '@/components/ui/Modal'
 import PinInput from '@/components/ui/PinInput'
 import Toast from '@/components/ui/Toast'
+import { useAuth } from '@/lib/auth-context'
 
 type TempType = 'HOT' | 'ICE' | null
 type Category = Exclude<typeof CATEGORIES[number], '전체'>
@@ -21,7 +22,7 @@ const TEMP_BADGE: Record<NonNullable<TempType>, string> = { HOT: 'bg-red-100 tex
 
 export default function MenuPage() {
   const router = useRouter()
-  const [authenticated, setAuthenticated] = useState(false)
+  const { adminAuthed, authenticateAdmin } = useAuth()
   const [pinError, setPinError] = useState(false)
   const [items, setItems] = useState<MenuItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,16 +46,13 @@ export default function MenuPage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { if (authenticated) fetchItems() }, [authenticated, fetchItems])
+  useEffect(() => { if (adminAuthed) fetchItems() }, [adminAuthed, fetchItems])
 
   const handlePinComplete = useCallback(async (pin: string) => {
-    const res = await fetch('/api/pin/verify', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin, type: 'admin' }),
-    })
-    if (res.ok) { setAuthenticated(true); setPinError(false) }
+    const success = await authenticateAdmin(pin)
+    if (success) setPinError(false)
     else setPinError(true)
-  }, [])
+  }, [authenticateAdmin])
 
   const openAdd = () => { setEditTarget(null); setForm({ ...DEFAULT_FORM, category: activeCategory }); setModalOpen(true) }
   const openEdit = (item: MenuItem) => {
@@ -97,7 +95,7 @@ export default function MenuPage() {
   const setField = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((p) => ({ ...p, [k]: v }))
   const categoryItems = items.filter((m) => m.category === activeCategory).sort((a, b) => a.sort_order - b.sort_order)
 
-  if (!authenticated) {
+  if (!adminAuthed) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#efebe4] via-[#e5e0d8] to-[#dedad2] font-sans relative overflow-hidden">
         <div className="absolute top-[10%] left-[5%] w-[280px] h-[280px] rounded-full bg-[radial-gradient(circle,rgba(201,162,39,0.05)_0%,transparent_70%)]" />

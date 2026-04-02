@@ -19,7 +19,7 @@ export default function Home() {
         <p className="text-lg text-rodem-text-sub font-medium">청주남부교회 카페</p>
       </div>
 
-      {/* Mode buttons */}
+      {/* 3 main buttons */}
       <div className="flex flex-col gap-3.5 w-full max-w-[360px] sm:max-w-[500px] relative z-10">
         <button
           onClick={() => router.push('/pos?mode=customer')}
@@ -38,56 +38,30 @@ export default function Home() {
         >
           <span className="text-[34px]">📋</span>
           <div className="text-left">
-            <div>봉사자 페이지</div>
-            <div className="text-[15px] font-normal opacity-85 mt-0.5">주문 접수 · 결제 기록 · 미결제 관리</div>
+            <div>봉사자</div>
+            <div className="text-[15px] font-normal opacity-85 mt-0.5">주문 · 정산 · 미결제 · 관리</div>
           </div>
         </button>
 
         <button
-          onClick={() => router.push('/lookup')}
+          onClick={() => router.push('/manage')}
           className="p-7 rounded-rodem border border-rodem-border-light bg-gradient-to-br from-[#fefcf9] to-[#f8f4ec] text-rodem-text cursor-pointer text-[22px] font-bold flex items-center gap-4 shadow-[0_2px_12px_rgba(0,0,0,0.03),0_1px_0_rgba(255,255,255,0.7)_inset] hover:-translate-y-[3px] transition-transform duration-300"
         >
-          <span className="text-[34px]">👀</span>
+          <span className="text-[34px]">⚙️</span>
           <div className="text-left">
-            <div>고객 내역확인</div>
-            <div className="text-[15px] font-normal text-rodem-text-sub mt-0.5">잔액 조회 · 주문 내역 확인</div>
+            <div>관리</div>
+            <div className="text-[15px] font-normal text-rodem-text-sub mt-0.5">정산 · 성도관리 · 메뉴 · 설정</div>
           </div>
         </button>
       </div>
 
-      {/* Admin links */}
-      <div className="grid grid-cols-4 gap-2 w-full max-w-[360px] sm:max-w-[500px] mt-8 relative z-10">
-        {[
-          { href: '/prepaid', icon: '💰', label: '선불충전' },
-          { href: '/dashboard', icon: '📊', label: '정산' },
-          { href: '/members', icon: '👥', label: '성도관리' },
-          { href: '/menu', icon: '🍽️', label: '메뉴관리' },
-        ].map((item) => (
-          <button
-            key={item.href}
-            onClick={() => router.push(item.href)}
-            className="flex flex-col items-center gap-1 py-3 rounded-rodem-sm border border-rodem-border-light bg-rodem-card/80 text-rodem-text-sub cursor-pointer hover:bg-rodem-card transition-colors text-sm font-semibold"
-          >
-            <span className="text-[22px]">{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex gap-3 mt-4 relative z-10">
-        <button
-          onClick={() => router.push('/settings')}
-          className="text-sm text-rodem-text-light cursor-pointer bg-transparent border-none underline underline-offset-2"
-        >
-          ⚙️ PIN 설정
-        </button>
-        <button
-          onClick={() => router.push('/admin')}
-          className="text-sm text-rodem-text-light cursor-pointer bg-transparent border-none underline underline-offset-2"
-        >
-          🔐 관리자
-        </button>
-      </div>
+      {/* Small link for customer lookup */}
+      <button
+        onClick={() => router.push('/lookup')}
+        className="mt-6 text-base text-rodem-text-sub cursor-pointer bg-transparent border-none underline underline-offset-2 relative z-10"
+      >
+        👀 고객 내역확인
+      </button>
     </div>
   )
 }
