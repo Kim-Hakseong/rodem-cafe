@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { createSupabaseBrowser } from '@/lib/supabase/client'
 import { CHOSUNG_LIST, DEPARTMENTS } from '@/lib/constants'
 import { getAllChosungs, cn, formatPrice } from '@/lib/utils'
+import { guide } from '@/lib/voice-guide'
 import type { SelectedMember } from '@/app/pos/page'
 
 interface MemberSelectProps {
@@ -148,13 +149,15 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
             return (
               <button
                 key={member.id}
-                onClick={() =>
+                onClick={() => {
+                  guide(`${member.name}님 선택되었습니다`)
                   onSelect({
                     id: member.id!,
                     name: member.name!,
                     credit_balance: member.credit_balance ?? 0,
                     prepaid_balance: member.prepaid_balance ?? 0,
                   })
+                }
                 }
                 className={cn(
                   'p-3 rounded-rodem-sm border text-left cursor-pointer transition-all duration-200',

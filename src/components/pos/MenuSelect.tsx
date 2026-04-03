@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { createSupabaseBrowser } from '@/lib/supabase/client'
 import { CATEGORIES } from '@/lib/constants'
 import { cn, formatPrice } from '@/lib/utils'
+import { guide } from '@/lib/voice-guide'
 import type { CartItem } from '@/app/pos/page'
 
 interface MenuSelectProps {
@@ -79,6 +80,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
         options: shot && shot !== '보통' ? { shot } : undefined,
       }]
     })
+    guide(`${item.name} 담았습니다`)
   }
 
   const addToCart = (item: MenuItem) => {
@@ -248,7 +250,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
                 ← 이전
               </button>
               <button
-                onClick={onNext}
+                onClick={() => { guide('성도를 선택해주세요'); onNext() }}
                 className="px-6 py-3.5 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold cursor-pointer text-base shadow-[0_4px_16px_rgba(201,162,39,0.2)]"
               >
                 다음 →

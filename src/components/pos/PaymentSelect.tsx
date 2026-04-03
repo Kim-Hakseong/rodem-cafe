@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { PAYMENT_METHODS, BANK_ACCOUNT } from '@/lib/constants'
 import { cn, formatPrice } from '@/lib/utils'
+import { guide } from '@/lib/voice-guide'
 import type { SelectedMember, PaymentInfo } from '@/app/pos/page'
 import QRCode from 'qrcode'
 
@@ -32,7 +33,16 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
     }
   }, [showTransferInfo, cartTotal])
 
+  const METHOD_VOICE: Record<string, string> = {
+    cash: '현금 결제 선택',
+    transfer: '계좌이체 결제 선택',
+    credit: '미결제 선택',
+    prepaid: '선불 결제 선택',
+  }
+
   const handlePayment = (methodId: string) => {
+    guide(METHOD_VOICE[methodId] || `${methodId} 결제 선택`)
+
     if (methodId === 'transfer') {
       setShowTransferInfo(true)
       return

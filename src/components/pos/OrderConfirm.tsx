@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { formatPrice, cn } from '@/lib/utils'
+import { guide } from '@/lib/voice-guide'
 import { PAYMENT_METHODS } from '@/lib/constants'
 import type { SelectedMember, CartItem, PaymentInfo } from '@/app/pos/page'
 
@@ -86,11 +87,14 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
       })
 
       if (res.ok) {
+        guide('주문이 완료되었습니다')
         onComplete()
       } else {
+        guide('주문에 실패했습니다')
         alert('주문 저장에 실패했습니다. 다시 시도해주세요.')
       }
     } catch {
+      guide('주문에 실패했습니다')
       alert('네트워크 오류가 발생했습니다.')
     } finally {
       setSubmitting(false)
