@@ -45,12 +45,23 @@ export function cn(...classes: (string | boolean | undefined | null)[]): string 
 }
 
 // TTS 음성 안내
+// Chrome: cancel() 직후 speak() 호출 시 무음 버그 → setTimeout 우회
 export function speak(text: string) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return
   window.speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.lang = 'ko-KR'
-  utterance.rate = 0.95
-  utterance.pitch = 1
-  window.speechSynthesis.speak(utterance)
+  setTimeout(() => {
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'ko-KR'
+    u.rate = 0.95
+    u.pitch = 1
+    window.speechSynthesis.speak(u)
+  }, 50)
+}
+
+// 브라우저 음성 합성 잠금 해제 (첫 사용자 제스처에서 호출)
+export function primeSpeech() {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return
+  const u = new SpeechSynthesisUtterance('')
+  u.volume = 0
+  window.speechSynthesis.speak(u)
 }

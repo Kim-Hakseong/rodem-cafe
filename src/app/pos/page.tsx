@@ -16,6 +16,7 @@ import TodaySummaryInline from '@/components/pos/TodaySummaryInline'
 import CreditManagerInline from '@/components/pos/CreditManagerInline'
 import AdminPanel from '@/components/pos/AdminPanel'
 import { useAuth } from '@/lib/auth-context'
+import { primeSpeech } from '@/lib/utils'
 
 export type CartItem = {
   id: string
@@ -78,6 +79,17 @@ function POSPageInner() {
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ show: true, message, type })
+  }, [])
+
+  // 브라우저 음성 합성 잠금 해제 — 첫 클릭/터치 시 빈 utterance 재생
+  useEffect(() => {
+    const handler = () => primeSpeech()
+    document.addEventListener('click', handler, { once: true })
+    document.addEventListener('touchstart', handler, { once: true })
+    return () => {
+      document.removeEventListener('click', handler)
+      document.removeEventListener('touchstart', handler)
+    }
   }, [])
 
   // Operating hours check (customer mode only)
