@@ -80,6 +80,22 @@ export default function OrderManager() {
     setLoading(false)
   }, [dateMode, date, dateFrom, dateTo, search])
 
+  // 고객별 요약 (성도명 검색 시)
+  const memberSummary = useMemo(() => {
+    if (!search || orders.length === 0) return null
+    const totalPrice = orders.reduce((s, o) => s + o.total_price, 0)
+    const byMethod: Record<string, number> = {}
+    const byStatus: Record<string, number> = {}
+    orders.forEach((o) => {
+      byStatus[o.status] = (byStatus[o.status] || 0) + 1
+      o.order_payments?.forEach((p) => {
+        byMethod[p.method] = (byMethod[p.method] || 0) + p.amount
+      })
+    })
+    const memberName = (orders[0].members as unknown as { name: string })?.name || search
+    return { memberName, totalPrice, byMethod, byStatus, count: orders.length }
+  }, [search, orders])
+
   // Group orders by date
   const groupedOrders = useMemo(() => {
     if (!showDateGroups) return null
@@ -251,6 +267,34 @@ export default function OrderManager() {
       ) : (
         <div className="space-y-2">
           <div className="text-sm text-rodem-text-sub text-right">총 {orders.length}건</div>
+
+          {/* 고객별 요약 카드 */}
+          {memberSummary && (
+            <div className="bg-gradient-to-br from-[#fefcf9] to-[#f8f4ec] rounded-rodem-sm border border-rodem-gold p-4 space-y-2">
+              <div className="text-lg font-bold text-rodem-text">
+                👤 {memberSummary.memberName}님 주문 내역
+              </div>
+              <div className="text-base text-rodem-text">
+                총 {memberSummary.count}건 · 합계 <span className="font-bold">{formatPrice(memberSummary.totalPrice)}</span>
+              </div>
+              {Object.keys(memberSummary.byMethod).length > 0 && (
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  {Object.entries(memberSummary.byMethod).map(([method, amount]) => (
+                    <span key={method} className={cn('font-semibold', METHOD_COLORS[method] || '')}>
+                      {METHOD_LABELS[method] || method} {formatPrice(amount)}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-x-2 gap-y-1 text-sm">
+                {Object.entries(memberSummary.byStatus).map(([status, count]) => (
+                  <span key={status} className={cn('px-2 py-0.5 rounded-full font-bold', STATUS_COLORS[status] || 'bg-gray-100 text-gray-500')}>
+                    {STATUS_LABELS[status] || status} {count}건
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {showDateGroups && groupedOrders ? (
             groupedOrders.map(([dateKey, dateOrders]) => (
