@@ -131,13 +131,8 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
         ))}
       </div>
 
-      {/* Search results — only shown when chosung input exists */}
-      {enteredChosungs.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="text-[36px] mb-2">🔍</div>
-          <div className="text-lg text-rodem-text-sub">초성을 입력하여 검색하세요</div>
-        </div>
-      ) : filtered.length === 0 ? (
+      {/* Member grid — 항상 표시 (초성 입력 시 필터링) */}
+      {filtered.length === 0 ? (
         <div className="text-center py-8">
           <div className="text-[36px] mb-2">🔍</div>
           <div className="text-lg text-rodem-text-sub">검색 결과가 없습니다</div>
@@ -157,8 +152,7 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
                     credit_balance: member.credit_balance ?? 0,
                     prepaid_balance: member.prepaid_balance ?? 0,
                   })
-                }
-                }
+                }}
                 className={cn(
                   'p-3 rounded-rodem-sm border text-left cursor-pointer transition-all duration-200',
                   'bg-gradient-to-br from-[#fefcf9] to-[#f8f4ec]',

@@ -4,6 +4,31 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createSupabaseBrowser } from '@/lib/supabase/client'
 import { cn, formatPrice, speak } from '@/lib/utils'
 
+// 알림음 재생 (speechSynthesis 실패 시에도 소리 보장)
+function playNotificationBeep() {
+  try {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.frequency.value = 880
+    gain.gain.value = 0.3
+    osc.start()
+    osc.stop(ctx.currentTime + 0.15)
+    setTimeout(() => {
+      const osc2 = ctx.createOscillator()
+      const gain2 = ctx.createGain()
+      osc2.connect(gain2)
+      gain2.connect(ctx.destination)
+      osc2.frequency.value = 1100
+      gain2.gain.value = 0.3
+      osc2.start()
+      osc2.stop(ctx.currentTime + 0.2)
+    }, 180)
+  } catch { /* AudioContext 미지원 시 무시 */ }
+}
+
 interface OrderQueueProps {
   isOpen: boolean
   onToggle: () => void
@@ -75,6 +100,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
               const menuName = (i.menu_items as unknown as { name: string })?.name || ''
               return `${menuName} ${i.quantity}잔`
             }).join(', ')
+            playNotificationBeep()
             speak(`${name}님 ${itemsText} 주문이 접수되었습니다`)
           }
         }
@@ -91,6 +117,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
               const menuName = (i.menu_items as unknown as { name: string })?.name || ''
               return `${menuName} ${i.quantity}잔`
             }).join(', ')
+            playNotificationBeep()
             speak(`${name}님 ${itemsText} 음료 나왔습니다`)
           }
         }
@@ -207,9 +234,9 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
                 <span className="text-base font-bold text-rodem-text">#{order.order_number}</span>
                 <span className="text-base px-2.5 py-0.5 rounded-full bg-rodem-gold-light text-rodem-gold font-bold">대기</span>
               </div>
-              <div className="text-base text-rodem-text mb-1">
+              <div className="text-[2rem] font-bold text-black mb-1">
                 {(order.members as unknown as { name: string })?.name}
-                <span className="text-base text-rodem-text-sub ml-2">
+                <span className="text-base text-rodem-text-sub ml-2 font-normal">
                   {new Date(order.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
                 {order.scheduled_for && (

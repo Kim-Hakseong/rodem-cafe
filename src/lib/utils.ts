@@ -44,23 +44,51 @@ export function cn(...classes: (string | boolean | undefined | null)[]): string 
   return classes.filter(Boolean).join(' ')
 }
 
-// TTS 음성 안내
-// Chrome: cancel() 직후 speak() 호출 시 무음 버그 → setTimeout 우회
+// ── TTS 음성 안내 ─────────────────────────────────────────
+// Samsung Browser 29 + Android 10 대응:
+//   1) 음성 목록 지연 로딩 → getVoices + voiceschanged 처리
+//   2) cancel() 직후 speak() 무음 → setTimeout 우회
+//   3) 한국어 음성 명시 선택 → 영어 fallback 방지
+
+let _koVoice: SpeechSynthesisVoice | null = null
+let _voicesLoaded = false
+
+function loadVoices() {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return
+  const voices = window.speechSynthesis.getVoices()
+  if (voices.length > 0) {
+    _koVoice = voices.find((v) => v.lang.startsWith('ko')) || null
+    _voicesLoaded = true
+  }
+}
+
+// 음성 목록 로딩 이벤트 (Samsung Browser는 비동기 로딩)
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  loadVoices()
+  window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+}
+
 export function speak(text: string) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return
-  window.speechSynthesis.cancel()
+  const synth = window.speechSynthesis
+  synth.cancel()
   setTimeout(() => {
+    // 음성 목록이 아직 없으면 한 번 더 시도
+    if (!_voicesLoaded) loadVoices()
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'ko-KR'
     u.rate = 0.95
     u.pitch = 1
-    window.speechSynthesis.speak(u)
+    if (_koVoice) u.voice = _koVoice
+    synth.speak(u)
   }, 50)
 }
 
 // 브라우저 음성 합성 잠금 해제 (첫 사용자 제스처에서 호출)
 export function primeSpeech() {
   if (typeof window === 'undefined' || !window.speechSynthesis) return
+  // 음성 목록 로딩 트리거
+  loadVoices()
   const u = new SpeechSynthesisUtterance('')
   u.volume = 0
   window.speechSynthesis.speak(u)
