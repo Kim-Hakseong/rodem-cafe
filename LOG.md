@@ -350,4 +350,123 @@
   - `src/components/pos/OrderQueue.tsx` — 완료 처리 TTS
   - `src/components/pos/PaymentSelect.tsx` — 계좌이체 QR 코드
 - **이슈:** 없음. 신규 패키지 불필요 (Web Speech API 브라우저 내장, qrcode 이미 설치)
+- **다음:** Phase 8.9
+
+## Phase 8.9 — 계좌이체 QR URL 방식 변경
+- **상태:** ✅ 완료
+- **완료일:** 2026-03-25
+- **산출물:**
+  - QR 내용을 텍스트에서 URL 방식으로 변경 (스캔 → 계좌번호 복사 전용 페이지)
+  - `src/app/transfer/page.tsx` 신규: 계좌정보 표시 + 복사 버튼 + 금액 표시
+  - 계좌번호 복사 시 은행명 포함 ("농협 351-1512-0013-03")
+- **이슈:** 없음
+- **다음:** Phase 8.10
+
+## Phase 8.10 — 베타 피드백 3차 (지출관리 + Export 확장)
+- **상태:** ✅ 완료
+- **완료일:** 2026-03-27
+- **산출물:**
+  - **지출관리 시스템**: 대시보드에 '지출' 탭 추가
+    - 재료 품목 등록/수정/비활성화 (expense_items 테이블)
+    - 지출 기록 (품목 선택 → 수량/금액 자동 계산, 메모, 날짜)
+    - `/api/expenses`, `/api/expenses/items` API 신규
+  - **Export 8시트 확장**: 전체주문, 월별, 고객별, 메뉴별, 회계보고, 주간수입상세, 미결제현황, 선불잔액현황
+  - **TTS 음성 알림 분리**: 접수 알림은 봉사자 페이지에서만, 완료 알림은 고객 페이지에서만
+  - DB 마이그레이션 2건: expense_items, expenses 테이블
+- **이슈:** 없음
+- **다음:** Phase 8.11
+
+## Phase 8.11 — 용어 변경 + UI 확대 + 정렬 수정
+- **상태:** ✅ 완료
+- **완료일:** 2026-03-28
+- **산출물:**
+  - **외상→미결제 용어 전면 변경**: 봉사자 페이지, 대시보드, 관리자, 고객 조회 등 전체
+  - **대기열/장바구니 UI 확대**: 메뉴명 22→28px, 수량/가격 확대
+  - **대기열 정렬 수정**: 오래된 주문이 위로 (ascending)
+  - **대시보드 오전/오후 정산 필터**: 12시 기준 필터 버튼 추가
+- **이슈:** 없음
+- **다음:** Phase 8.12
+
+## Phase 8.12 — 베타 피드백 종합 (6개 기능)
+- **상태:** ✅ 완료
+- **완료일:** 2026-03-31
+- **산출물:**
+  - **아메리카노 샷 옵션**: HOT/ICE 주문 시 보통/연하게/진하게 선택 모달
+    - `order_items.options` jsonb 컬럼 추가, 대기열/주문확인에 옵션 표시
+    - 같은 메뉴라도 옵션이 다르면 별도 장바구니 항목
+  - **선불 잔액 자동 차감 수정**: null 안전 처리 (`?? 0`) + 음수 방지 (`Math.max(0, ...)`)
+    - 유장열 님 수동 차감 실행 (30,000 → 26,500원)
+  - **MemberSelect 1-phase 통합**: 부서 버튼 + 초성 키보드 한 화면, 그리드는 초성 입력 후만 표시
+  - **예약 주문 기능**: 주문 확인 단계에서 예약 토글 → 시간 선택 (5분 단위)
+    - `orders.scheduled_for` timestamptz 컬럼 추가, 대기열에서 시간 도래 시 표시
+  - **마감시간 설정**: 설정 시간 동안 고객 주문 페이지 차단 (기본 10:35~12:30)
+    - `admin_settings.open_time`, `close_time` 컬럼 추가
+    - 관리자 설정 탭에 마감시간 UI, 30초마다 자동 체크
+  - **엑셀 셀 색상**: exceljs 패키지로 교체 (xlsx 제거)
+    - 오후 행 회색 배경, 이체 셀 노란색 배경, 헤더 볼드+배경색
+  - **정산에서 선불 제외**: 실 매출 = 총 매출 - 선불
+    - TodaySummary, 대시보드 오늘/월간 탭, 엑셀 월별/주간수입/회계보고 시트 모두 적용
+  - **대시보드 탭 개편**: '전체' 탭 추가 (주문+반려 전체 내역), '주간' → '오늘' 명칭 변경
+  - **정산 팝업 개선**: 주문번호순 정렬, 결제수단 태그(색상별), 메뉴 표시, 폰트 대폭 확대
+  - **미결제 팝업 개선**: 전체 기간 조회, '인별 잔액'/'전체 내역' 탭 전환, 이름/날짜/금액/메뉴 표시
+- **DB 마이그레이션 3건:** order_items.options, orders.scheduled_for, admin_settings.open_time/close_time
+- **패키지 변경:** +exceljs, -xlsx
+- **버그 수정:** 외상→미결제 누락 1건 (OrderQueue), 마감시간 로직 반전 (설정 시간=차단 시간)
+- **이슈:** WSL Git 인증 설정 (`credential.helper` → Windows Git Credential Manager 연동)
+- **다음:** Phase 8.13
+
+## Phase 8.13 — UX 대개편 (봉사자/관리자 통합)
+- **상태:** ✅ 완료
+- **완료일:** 2026-04-02
+- **산출물:**
+  - **봉사자+관리자 완전 통합**: `/pos` 하단 탭바 (주문|정산|미결제|관리)
+    - 정산/미결제: 모달 → 인라인 탭 콘텐츠 (`TodaySummaryInline`, `CreditManagerInline`)
+    - 관리: `AdminPanel` → `SettingsPanel` (PIN/QR/마감시간 등)
+    - 정산 탭 날짜 필터 (일별/기간/전체) + 날짜별 그룹핑
+  - **홈 대폭 단순화**: 9버튼 → 3버튼 (주문하기, 봉사자, 관리) + 고객 내역확인 링크
+  - **세션 기반 인증**: PIN 1회 입력 후 sessionStorage 유지 (4시간 타임아웃)
+    - `src/lib/auth-context.tsx` 신규 (AuthProvider + useAuth hook)
+  - **관리 허브 신규**: `/manage` 페이지 (정산/성도/메뉴/PIN 설정 링크)
+  - **삭제**: `/admin`, `/prepaid`, `PrepaidAdjust` (통합으로 흡수)
+  - **기타**: 대시보드 고객별 목록 잘림 수정, 지출 탭 50/50 영역 분배
+- **변경 파일:** 18개 (신규 7개, 삭제 3개, 수정 8개)
+- **이슈:** 없음
+- **다음:** Phase 8.14
+
+## Phase 8.14 — 음성 안내 + TTS 안정화
+- **상태:** ✅ 완료
+- **완료일:** 2026-04-03
+- **산출물:**
+  - **주문 플로우 전체 음성 안내**: `src/lib/voice-guide.ts` 모듈
+    - MenuSelect: 메뉴 담기 + 다음 단계 안내
+    - MemberSelect: 성도 선택 안내
+    - PaymentSelect: 결제방식 선택 안내
+    - OrderConfirm: 주문 완료/실패 안내
+    - `VOICE_ENABLED` 플래그로 즉시 비활성화 가능
+  - **TTS 안정화 (Samsung Browser 29.0 대응)**:
+    - `speak()` 개선: `cancel()` 후 `setTimeout(50ms)` 우회 (Chrome 버그)
+    - `voiceschanged` 이벤트 리스너: 비동기 음성 목록 로딩 대응
+    - 한국어 음성 명시 선택 (`_koVoice` 캐싱)
+    - `primeSpeech()`: 첫 사용자 제스처(click/touchstart)에서 음성 합성 잠금 해제
+  - **알림음 이중 보장**: `playNotificationBeep()` (AudioContext 880Hz+1100Hz 2단 비프)
+    - 봉사자: 새 주문 접수 시 비프 + TTS
+    - 고객: 음료 완료 시 비프 + TTS
+- **변경 파일:** `utils.ts`, `voice-guide.ts`, `pos/page.tsx`, `OrderQueue.tsx`, `MemberSelect.tsx`, `MenuSelect.tsx`, `OrderConfirm.tsx`, `PaymentSelect.tsx`
+- **이슈:** Samsung Internet Browser 음성 목록 지연 로딩 → voiceschanged + primeSpeech로 해결
+- **다음:** Phase 8.15
+
+## Phase 8.15 — 성도선택 개선 + 대기열 확대 + 고객별 주문 요약
+- **상태:** ✅ 완료
+- **완료일:** 2026-04-11
+- **산출물:**
+  - **MemberSelect 그리드 항상 표시**: 초성 입력 전에도 전체/부서별 성도 그리드 노출
+    - 초성 입력 시 실시간 필터링 (기존 "초성을 입력하여 검색하세요" 플레이스홀더 제거)
+  - **OrderQueue 이름 확대**: `text-base` → `text-[2rem]` (2배 확대), 검정+볼드
+  - **주문관리 고객별 요약 카드**: 관리 탭 > 주문관리에서 성도명 검색 시 상단 요약 표시
+    - 총 주문 건수 + 합계 금액
+    - 결제수단별 금액 (현금/이체/미결제/선불 — 색상 구분)
+    - 상태별 건수 (대기/완료/반려 — 뱃지)
+    - 기존 날짜 필터(일별/기간/전체)와 조합 가능
+- **변경 파일:** `MemberSelect.tsx`, `OrderQueue.tsx`, `OrderManager.tsx`
+- **이슈:** 없음
 - **다음:** 베타 운영 계속
