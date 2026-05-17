@@ -28,7 +28,7 @@ const EMOJI_MAP: Record<string, string> = {
   '커피': '☕', '음료': '🧃', '차': '🍵', '과자': '🍪', '기타': '🧊',
 }
 
-const SHOT_OPTIONS = ['보통', '연하게', '진하게'] as const
+const SHOT_OPTIONS = ['보통', '연하게'] as const
 
 function isAmericano(item: MenuItem): boolean {
   return item.name.includes('아메리카노')
@@ -287,12 +287,10 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
                     'w-full py-4 rounded-rodem-sm border-2 text-lg font-bold cursor-pointer transition-all',
                     opt === '보통'
                       ? 'bg-rodem-gold-light border-rodem-gold text-rodem-gold'
-                      : opt === '연하게'
-                        ? 'bg-blue-50 border-blue-400 text-blue-600'
-                        : 'bg-red-50 border-red-400 text-red-600'
+                      : 'bg-blue-50 border-blue-400 text-blue-600'
                   )}
                 >
-                  {opt === '보통' ? '☕ 보통' : opt === '연하게' ? '💧 연하게 (샷 적게)' : '💪 진하게 (샷 추가)'}
+                  {opt === '보통' ? '☕ 보통' : '💧 연하게 (샷 적게)'}
                 </button>
               ))}
             </div>

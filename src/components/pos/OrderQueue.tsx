@@ -4,6 +4,38 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createSupabaseBrowser } from '@/lib/supabase/client'
 import { cn, formatPrice, speak } from '@/lib/utils'
 
+const PAYMENT_LABELS: Record<string, { label: string; icon: string; cls: string }> = {
+  cash: { label: '현금', icon: '💵', cls: 'bg-rodem-green-light text-rodem-green border-rodem-green' },
+  transfer: { label: '이체', icon: '🏦', cls: 'bg-rodem-blue-light text-rodem-blue border-rodem-blue' },
+  credit: { label: '외상', icon: '📋', cls: 'bg-rodem-orange-light text-rodem-orange border-rodem-orange' },
+  prepaid: { label: '선불', icon: '💰', cls: 'bg-rodem-purple-light text-rodem-purple border-rodem-purple' },
+}
+
+function PaymentBadges({ payments }: { payments: QueuePayment[] }) {
+  if (!payments || payments.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {payments.map((p) => {
+        const info = PAYMENT_LABELS[p.method]
+        if (!info) return null
+        return (
+          <span
+            key={p.id}
+            className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-base font-bold',
+              info.cls,
+            )}
+          >
+            <span>{info.icon}</span>
+            <span>{info.label}</span>
+            <span className="opacity-80">{formatPrice(p.amount)}</span>
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 // 알림음 재생 (speechSynthesis 실패 시에도 소리 보장)
 function playNotificationBeep() {
   try {
@@ -258,8 +290,11 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
                   )
                 })}
               </div>
-              <div className="text-base font-bold text-rodem-text mb-2">
-                {formatPrice(order.total_price)}
+              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                <div className="text-base font-bold text-rodem-text">
+                  {formatPrice(order.total_price)}
+                </div>
+                <PaymentBadges payments={order.order_payments} />
               </div>
 
               {/* Transfer status indicator */}
@@ -327,9 +362,10 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
               <span className="text-base font-bold text-rodem-text">#{order.order_number}</span>
               <span className="text-base px-2.5 py-0.5 rounded-full bg-rodem-green-light text-rodem-green font-bold">완료</span>
             </div>
-            <div className="text-base text-rodem-text-sub">
+            <div className="text-base text-rodem-text-sub mb-1.5">
               {(order.members as unknown as { name: string })?.name} · {new Date(order.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
             </div>
+            <PaymentBadges payments={order.order_payments} />
           </div>
         ))}
 
