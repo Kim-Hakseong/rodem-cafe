@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/server'
+import { CREDIT_ORDER_ENABLED } from '@/lib/constants'
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,6 +8,11 @@ export async function POST(request: NextRequest) {
 
     if (!memberId || !items?.length || !payments?.length || !totalPrice) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    }
+
+    // 미결제 중단 — 신규 주문에 미결제 결제수단 사용 불가
+    if (!CREDIT_ORDER_ENABLED && payments.some((p: { method: string }) => p.method === 'credit')) {
+      return NextResponse.json({ error: '미결제는 더 이상 사용할 수 없습니다' }, { status: 400 })
     }
 
     const supabase = createSupabaseAdmin()

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createSupabaseBrowser } from '@/lib/supabase/client'
 import { cn, formatPrice, speak } from '@/lib/utils'
+import { CREDIT_ORDER_ENABLED } from '@/lib/constants'
 
 const PAYMENT_LABELS: Record<string, { label: string; icon: string; cls: string }> = {
   cash: { label: '현금', icon: '💵', cls: 'bg-rodem-green-light text-rodem-green border-rodem-green' },
@@ -315,12 +316,15 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
                       >
                         입금 확인
                       </button>
-                      <button
-                        onClick={() => handleTransferAction(transferPayment.id, 'unpaid')}
-                        className="flex-1 py-2 rounded-[8px] bg-rodem-orange-light border border-rodem-orange text-rodem-orange text-base font-bold cursor-pointer"
-                      >
-                        미결제 처리
-                      </button>
+                      {/* 미결제 중단 시 이체 → 미결제 전환 불가 (CREDIT_ORDER_ENABLED) */}
+                      {CREDIT_ORDER_ENABLED && (
+                        <button
+                          onClick={() => handleTransferAction(transferPayment.id, 'unpaid')}
+                          className="flex-1 py-2 rounded-[8px] bg-rodem-orange-light border border-rodem-orange text-rodem-orange text-base font-bold cursor-pointer"
+                        >
+                          미결제 처리
+                        </button>
+                      )}
                     </div>
                   )}
                   <div className="flex gap-1.5">

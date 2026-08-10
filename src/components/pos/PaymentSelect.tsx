@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PAYMENT_METHODS, BANK_ACCOUNT } from '@/lib/constants'
+import { PAYMENT_METHODS, BANK_ACCOUNT, CREDIT_ORDER_ENABLED } from '@/lib/constants'
 import { cn, formatPrice } from '@/lib/utils'
 import { guide } from '@/lib/voice-guide'
 import type { SelectedMember, PaymentInfo } from '@/app/pos/page'
@@ -20,6 +20,11 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
   const [showPrepaidShortage, setShowPrepaidShortage] = useState(false)
   const [transferQrUrl, setTransferQrUrl] = useState('')
   const shortage = cartTotal - member.prepaid_balance
+
+  // 미결제 중단 시 결제수단 목록에서 제외 (CREDIT_ORDER_ENABLED)
+  const visibleMethods = PAYMENT_METHODS.filter(
+    (pm) => CREDIT_ORDER_ENABLED || pm.id !== 'credit'
+  )
 
   // 계좌이체 QR 생성 — URL 방식 (스캔 시 복사 페이지로 이동)
   useEffect(() => {
@@ -81,13 +86,15 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
 
       {/* Payment buttons */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        {PAYMENT_METHODS.map((pm) => (
+        {visibleMethods.map((pm, i) => (
           <button
             key={pm.id}
             onClick={() => handlePayment(pm.id)}
             className={cn(
               'p-5 rounded-rodem-sm border-2 text-center cursor-pointer transition-all duration-200',
               'hover:-translate-y-[2px] hover:shadow-md',
+              // 홀수 개일 때 마지막 버튼은 한 줄 전체 — 터치 타겟 유지
+              i === visibleMethods.length - 1 && visibleMethods.length % 2 === 1 && 'col-span-2',
             )}
             style={{
               backgroundColor: pm.id === 'cash' ? '#eaf5ee' : pm.id === 'transfer' ? '#eaf0fa' : pm.id === 'credit' ? '#fcf2e4' : '#f0ebfa',
@@ -180,12 +187,14 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
               부족분: <span className="font-bold text-rodem-red">{formatPrice(shortage)}</span>
             </div>
             <div className="flex flex-col gap-2">
-              <button
-                onClick={() => handlePrepaidOption('credit')}
-                className="w-full py-3 rounded-rodem-sm bg-rodem-orange-light border border-rodem-orange text-rodem-orange font-bold cursor-pointer text-base"
-              >
-                📋 부족분 미결제 처리 ({formatPrice(shortage)})
-              </button>
+              {CREDIT_ORDER_ENABLED && (
+                <button
+                  onClick={() => handlePrepaidOption('credit')}
+                  className="w-full py-3 rounded-rodem-sm bg-rodem-orange-light border border-rodem-orange text-rodem-orange font-bold cursor-pointer text-base"
+                >
+                  📋 부족분 미결제 처리 ({formatPrice(shortage)})
+                </button>
+              )}
               <button
                 onClick={() => handlePrepaidOption('cash')}
                 className="w-full py-3 rounded-rodem-sm bg-rodem-green-light border border-rodem-green text-rodem-green font-bold cursor-pointer text-base"
