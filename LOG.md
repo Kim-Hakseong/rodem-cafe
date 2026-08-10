@@ -486,3 +486,32 @@
 - **변경 파일:** `OrderQueue.tsx`, `MenuSelect.tsx`
 - **이슈:** 없음
 - **다음:** 베타 운영 계속
+
+## Phase 8.17 — 미결제(외상) 신규 발생 중단
+- **상태:** ✅ 완료 (배포 대기)
+- **완료일:** 2026-08-10
+- **배경:** 카페 봉사자 요청 — 더 이상 미결제(외상)로 주문을 받지 않기로 함.
+  단, 기존 미결제 잔액은 계속 추적·정산해야 하므로 조회/상환 기능은 전부 유지.
+- **산출물:**
+  - **`CREDIT_ORDER_ENABLED` 기능 플래그 신설** (`constants.ts`, 기본값 `false`)
+    - 신규 미결제 발생 지점만 이 플래그 하나로 제어 → **롤백 = 한 줄 `true`**
+    - DB 스키마·데이터·기존 내역은 일절 변경 없음
+  - **차단 지점 (신규 미결제 발생)**
+    - `PaymentSelect`: 결제수단 그리드에서 미결제 버튼 제외
+      (현금/계좌이체 2열 + 선불 전체폭 — 홀수 개일 때 마지막 버튼 `col-span-2`로 터치 타겟 유지)
+    - `PaymentSelect`: 선불 잔액부족 모달의 `부족분 미결제 처리` 버튼 제거 → 현금/이체만
+    - `OrderQueue`: 이체 확인 영역의 `미결제 처리` 버튼 제거
+      → 입금 미확인 건은 `transfer_status: 'pending'`(확인 대기)으로 유지, 필요 시 주문 취소 또는 관리자 주문관리에서 정정
+    - `api/orders`: `method: 'credit'` 포함 주문 생성 400 거부 (UI 우회 방지)
+    - `api/orders/transfer-confirm`: `action: 'unpaid'` 400 거부
+    - 주문자·봉사자 모드 모두 적용 (동일 컴포넌트 공유)
+  - **유지 지점 (기존 미결제 추적·정산)**
+    - 봉사자 `💰 미결제` 탭 + 상환 처리(`api/credit/settle`)
+    - 성도선택 화면 미결제 뱃지, 대기열 외상 뱃지
+    - 내역조회(`/lookup`), 개인페이지(`/my/[token]`) 미결제 잔액
+    - 정산 대시보드, 관리 탭 주문관리 결제수단별 집계
+    - 관리자 `PaymentEditor`의 결제수단 수정(미결제 포함) — 과거 기록 정정용이라 존치
+- **변경 파일:** `constants.ts`, `PaymentSelect.tsx`, `OrderQueue.tsx`, `api/orders/route.ts`, `api/orders/transfer-confirm/route.ts`
+- **검증:** `tsc --noEmit` 통과, `pnpm build` 통과
+- **이슈:** 없음
+- **다음:** 베타 운영 계속
