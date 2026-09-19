@@ -325,7 +325,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
                   {new Date(order.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
                 {order.scheduled_for && (
-                  <span className="text-sm text-rodem-purple font-semibold ml-2">
+                  <span className="inline-block text-2xl text-white bg-rodem-purple font-bold ml-2 px-3 py-0.5 rounded-full align-middle">
                     🕐 {formatTime(order.scheduled_for)} 예약
                   </span>
                 )}
@@ -473,9 +473,14 @@ function ReservationCard({ order, isStaff, onComplete, onCancel }: ReservationCa
     <div className="bg-white rounded-rodem-sm p-3.5 border-l-4 border-l-rodem-purple border border-rodem-border-light">
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-base font-bold text-rodem-text">#{order.order_number}</span>
-        <span className="text-base px-2.5 py-0.5 rounded-full bg-rodem-purple-light text-rodem-purple font-bold">
-          🕐 {formatTime(order.scheduled_for!)} 예약 · {remaining}분 후
+        <span className="text-base font-bold text-rodem-purple">⏳ 아직 만들지 마세요</span>
+      </div>
+      {/* 예약 시각 — 봉사자가 바로 제조하지 않도록 카드에서 가장 크게 표시 */}
+      <div className="flex items-baseline justify-between gap-2 flex-wrap mb-2 px-3 py-2 rounded-rodem-sm bg-rodem-purple text-white">
+        <span className="text-[2.75rem] font-extrabold leading-tight">
+          🕐 {formatTime(order.scheduled_for!)} 예약
         </span>
+        <span className="text-2xl font-bold opacity-90">{remaining}분 후</span>
       </div>
       <div className="text-[1.75rem] font-bold text-black mb-1">
         {name}
