@@ -90,10 +90,32 @@ type QueueOrder = {
   order_payments: QueuePayment[]
 }
 
+// 예약 시간이 아직 안 된 대기 주문 = 'reserved' (대기열 상단 예약 섹션에 별도 표시)
+function effectiveStatus(order: QueueOrder, nowIso: string): string {
+  if (order.status === 'pending' && order.scheduled_for && order.scheduled_for > nowIso) return 'reserved'
+  return order.status
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function minutesUntil(iso: string): number {
+  return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 60000))
+}
+
+function describeItems(order: QueueOrder): string {
+  return order.order_items.map((i) => {
+    const menuName = (i.menu_items as unknown as { name: string })?.name || ''
+    return `${menuName} ${i.quantity}잔`
+  }).join(', ')
+}
+
 export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onPrepaidAdjust }: OrderQueueProps) {
   const [orders, setOrders] = useState<QueueOrder[]>([])
   const [showCompleted, setShowCompleted] = useState(true)
   const [showCancelled, setShowCancelled] = useState(false)
+  const [nowIso, setNowIso] = useState(() => new Date().toISOString())
   const isStaff = mode === 'staff'
 
   // TTS: 이전 주문 상태를 추적하여 변경 감지
@@ -112,51 +134,53 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
       .limit(50)
 
     if (data) {
-      const now = new Date().toISOString()
-      const newOrders = (data as unknown as QueueOrder[]).filter((o) => {
-        if (!o.scheduled_for) return true
-        return o.scheduled_for <= now || o.status === 'completed' || o.status === 'cancelled'
-      })
+      const nowIso = new Date().toISOString()
+      const newOrders = data as unknown as QueueOrder[]
       setOrders(newOrders)
+      setNowIso(nowIso)
 
+      const statusMap = new Map(newOrders.map((o) => [o.id, effectiveStatus(o, nowIso)]))
       const prev = prevOrderMapRef.current
       if (prev !== null) {
-        // 봉사자 페이지: 새 주문 접수 알림
+        const nameOf = (o: QueueOrder) => (o.members as unknown as { name: string })?.name || ''
+
+        // 봉사자 페이지: 새 주문 접수 / 예약 접수 / 예약 시간 도래 알림
         if (mode === 'staff') {
           const newPending = newOrders.filter(
-            (o) => o.status === 'pending' && !prev.has(o.id)
+            (o) => statusMap.get(o.id) === 'pending' && prev.get(o.id) !== 'pending'
+          )
+          const newReserved = newOrders.filter(
+            (o) => statusMap.get(o.id) === 'reserved' && !prev.has(o.id)
           )
           if (newPending.length > 0) {
             const order = newPending[0]
-            const name = (order.members as unknown as { name: string })?.name || ''
-            const itemsText = order.order_items.map((i) => {
-              const menuName = (i.menu_items as unknown as { name: string })?.name || ''
-              return `${menuName} ${i.quantity}잔`
-            }).join(', ')
+            const wasReserved = prev.get(order.id) === 'reserved'
             playNotificationBeep()
-            speak(`${name}님 ${itemsText} 주문이 접수되었습니다`)
+            speak(wasReserved
+              ? `${nameOf(order)}님 예약 시간입니다. ${describeItems(order)} 준비해주세요`
+              : `${nameOf(order)}님 ${describeItems(order)} 주문이 접수되었습니다`)
+          } else if (newReserved.length > 0) {
+            const order = newReserved[0]
+            playNotificationBeep()
+            speak(`${nameOf(order)}님 ${formatTime(order.scheduled_for!)} 예약 주문이 접수되었습니다`)
           }
         }
 
-        // 고객 페이지: 음료 완료 알림
+        // 고객 페이지: 음료 완료 알림 (예약 주문을 미리 완료한 경우 포함)
         if (mode === 'customer') {
-          const newlyCompleted = newOrders.filter(
-            (o) => o.status === 'completed' && prev.get(o.id) === 'pending'
-          )
+          const newlyCompleted = newOrders.filter((o) => {
+            const before = prev.get(o.id)
+            return o.status === 'completed' && (before === 'pending' || before === 'reserved')
+          })
           if (newlyCompleted.length > 0) {
             const order = newlyCompleted[0]
-            const name = (order.members as unknown as { name: string })?.name || ''
-            const itemsText = order.order_items.map((i) => {
-              const menuName = (i.menu_items as unknown as { name: string })?.name || ''
-              return `${menuName} ${i.quantity}잔`
-            }).join(', ')
             playNotificationBeep()
-            speak(`${name}님 ${itemsText} 음료 나왔습니다`)
+            speak(`${nameOf(order)}님 ${describeItems(order)} 음료 나왔습니다`)
           }
         }
       }
 
-      prevOrderMapRef.current = new Map(newOrders.map((o) => [o.id, o.status]))
+      prevOrderMapRef.current = statusMap
     }
   }, [mode])
 
@@ -203,7 +227,11 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
     } catch { /* silent */ }
   }
 
-  const pendingOrders = orders.filter((o) => o.status === 'pending')
+  const pendingOrders = orders.filter((o) => effectiveStatus(o, nowIso) === 'pending')
+  // 예약 주문: 예약 시간이 이른 순
+  const reservedOrders = orders
+    .filter((o) => effectiveStatus(o, nowIso) === 'reserved')
+    .sort((a, b) => (a.scheduled_for! < b.scheduled_for! ? -1 : 1))
   const completedOrders = orders.filter((o) => o.status === 'completed')
   const cancelledOrders = orders.filter((o) => o.status === 'cancelled')
   const pendingCount = pendingOrders.length
@@ -221,6 +249,11 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
             {pendingCount}
           </span>
         )}
+        {reservedOrders.length > 0 && (
+          <span className="w-6 h-6 rounded-full bg-rodem-purple text-white text-sm font-bold flex items-center justify-center" title="예약">
+            {reservedOrders.length}
+          </span>
+        )}
         <span className="text-sm font-bold" style={{ writingMode: 'vertical-rl' }}>
           대기
         </span>
@@ -235,7 +268,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
         <div>
           <div className="text-base font-bold">📋 주문 대기열</div>
           <div className="text-sm opacity-70">
-            대기 {pendingCount}건 · 완료 {completedOrders.length}건
+            대기 {pendingCount}건{reservedOrders.length > 0 && ` · 예약 ${reservedOrders.length}건`} · 완료 {completedOrders.length}건
           </div>
         </div>
         <div className="flex gap-1.5 items-center">
@@ -255,6 +288,25 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
 
       {/* Orders list */}
       <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5">
+        {/* Reserved orders — 예약 시간 전이라도 봉사자·주문자 모두 확인 가능 */}
+        {reservedOrders.length > 0 && (
+          <div className="rounded-rodem-sm bg-rodem-purple-light border border-rodem-purple/30 p-2.5 space-y-2">
+            <div className="text-base font-bold text-rodem-purple px-1">
+              🕐 예약 주문 {reservedOrders.length}건
+              <span className="text-sm font-normal ml-2">예약 시간이 되면 대기 목록으로 이동합니다</span>
+            </div>
+            {reservedOrders.map((order) => (
+              <ReservationCard
+                key={order.id}
+                order={order}
+                isStaff={isStaff}
+                onComplete={handleComplete}
+                onCancel={handleCancel}
+              />
+            ))}
+          </div>
+        )}
+
         {/* Pending orders */}
         {pendingOrders.map((order) => {
           const transferPayment = order.order_payments?.find(
@@ -274,7 +326,7 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
                 </span>
                 {order.scheduled_for && (
                   <span className="text-sm text-rodem-purple font-semibold ml-2">
-                    🕐 {new Date(order.scheduled_for).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 예약
+                    🕐 {formatTime(order.scheduled_for)} 예약
                   </span>
                 )}
               </div>
@@ -402,6 +454,67 @@ export default function OrderQueue({ isOpen, onToggle, refreshTrigger, mode, onP
           <div className="text-center py-8 text-rodem-text-sub text-base">주문이 없습니다</div>
         )}
       </div>
+    </div>
+  )
+}
+
+interface ReservationCardProps {
+  order: QueueOrder
+  isStaff: boolean
+  onComplete: (orderId: string) => void
+  onCancel: (orderId: string) => void
+}
+
+function ReservationCard({ order, isStaff, onComplete, onCancel }: ReservationCardProps) {
+  const name = (order.members as unknown as { name: string })?.name
+  const remaining = minutesUntil(order.scheduled_for!)
+
+  return (
+    <div className="bg-white rounded-rodem-sm p-3.5 border-l-4 border-l-rodem-purple border border-rodem-border-light">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-base font-bold text-rodem-text">#{order.order_number}</span>
+        <span className="text-base px-2.5 py-0.5 rounded-full bg-rodem-purple-light text-rodem-purple font-bold">
+          🕐 {formatTime(order.scheduled_for!)} 예약 · {remaining}분 후
+        </span>
+      </div>
+      <div className="text-[1.75rem] font-bold text-black mb-1">
+        {name}
+        <span className="text-base text-rodem-text-sub ml-2 font-normal">{formatTime(order.created_at)} 주문</span>
+      </div>
+      <div className="text-2xl font-bold text-black leading-tight mb-2">
+        {order.order_items?.map((item, i) => {
+          const menuName = (item.menu_items as unknown as { name: string })?.name || ''
+          const shot = (item.options as { shot?: string } | null)?.shot
+          const shotLabel = shot && shot !== '보통' ? ` (${shot})` : ''
+          return (
+            <span key={i}>
+              {menuName}{shotLabel} x{item.quantity}
+              {i < order.order_items.length - 1 ? ', ' : ''}
+            </span>
+          )
+        })}
+      </div>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="text-base font-bold text-rodem-text">{formatPrice(order.total_price)}</div>
+        <PaymentBadges payments={order.order_payments} />
+      </div>
+
+      {isStaff && (
+        <div className="flex gap-1.5 mt-2">
+          <button
+            onClick={() => onComplete(order.id)}
+            className="flex-1 py-2 rounded-[8px] bg-rodem-green-light border border-rodem-green text-rodem-green text-base font-bold cursor-pointer"
+          >
+            미리 완료
+          </button>
+          <button
+            onClick={() => onCancel(order.id)}
+            className="flex-1 py-2 rounded-[8px] bg-red-50 border border-rodem-red text-rodem-red text-base font-bold cursor-pointer"
+          >
+            예약 취소
+          </button>
+        </div>
+      )}
     </div>
   )
 }

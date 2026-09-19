@@ -11,7 +11,8 @@ interface OrderConfirmProps {
   cart: CartItem[]
   payments: PaymentInfo
   cartTotal: number
-  onComplete: () => void
+  // 예약 주문이면 예약 시간 라벨(예: '오전 11:30')을 전달
+  onComplete: (reservationTime?: string) => void
   onBack: () => void
   mode: 'staff' | 'customer'
 }
@@ -87,8 +88,13 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
       })
 
       if (res.ok) {
-        guide('주문이 완료되었습니다')
-        onComplete()
+        if (scheduledFor) {
+          guide(`${reservationTime} 예약이 접수되었습니다`)
+          onComplete(reservationTime)
+        } else {
+          guide('주문이 완료되었습니다')
+          onComplete()
+        }
       } else {
         guide('주문에 실패했습니다')
         alert('주문 저장에 실패했습니다. 다시 시도해주세요.')
@@ -152,7 +158,7 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
         <div className="flex items-center justify-between">
           <div>
             <div className="font-bold text-base text-rodem-text">🕐 예약 주문</div>
-            <div className="text-sm text-rodem-text-sub mt-0.5">지정 시간에 대기열에 표시됩니다</div>
+            <div className="text-sm text-rodem-text-sub mt-0.5">대기열 ‘예약’ 칸에 바로 표시되고, 예약 시간에 제조가 시작됩니다</div>
           </div>
           <button
             onClick={() => { setIsReservation(!isReservation); setReservationTime('') }}
