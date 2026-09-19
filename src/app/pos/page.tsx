@@ -155,9 +155,15 @@ function POSPageInner() {
     setPayments([])
   }, [])
 
-  const handleOrderComplete = useCallback(() => {
+  const handleOrderComplete = useCallback((reservationTime?: string) => {
     setOrderRefresh((p) => p + 1)
-    showToast('주문이 접수되었습니다!', 'success')
+    if (reservationTime) {
+      // 예약 주문: 예약 내역을 바로 확인할 수 있도록 대기열을 연다
+      showToast(`🕐 ${reservationTime} 예약이 접수되었습니다! 대기열 ‘예약’ 칸에서 확인하세요`, 'success')
+      setQueueOpen(true)
+    } else {
+      showToast('주문이 접수되었습니다!', 'success')
+    }
     resetOrder()
   }, [resetOrder, showToast])
 

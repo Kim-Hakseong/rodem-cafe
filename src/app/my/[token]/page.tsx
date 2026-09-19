@@ -17,6 +17,8 @@ type OrderRow = {
   id: string
   total_price: number
   created_at: string
+  status: string
+  scheduled_for: string | null
   order_items: { quantity: number; menu_items: { name: string } | null }[]
 }
 
@@ -85,7 +87,7 @@ export default function MyPage() {
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
         const { data } = await supabase
           .from('orders')
-          .select('id, total_price, created_at, order_items(quantity, menu_items(name))')
+          .select('id, total_price, created_at, status, scheduled_for, order_items(quantity, menu_items(name))')
           .eq('member_id', member.id)
           .gte('created_at', threeMonthsAgo.toISOString())
           .order('created_at', { ascending: false })
@@ -104,6 +106,11 @@ export default function MyPage() {
     if (res.ok) { setAuthenticated(true); setPinError(false) }
     else setPinError(true)
   }
+
+  const nowIso = new Date().toISOString()
+  const reservedOrders = orders.filter(
+    (o) => o.status === 'pending' && o.scheduled_for && o.scheduled_for > nowIso
+  )
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-rodem-bg font-sans"><div className="text-rodem-text-sub">불러오는 중...</div></div>
 
@@ -153,6 +160,30 @@ export default function MyPage() {
             <div className="text-[22px] font-bold text-rodem-purple">{formatPrice(member?.prepaid_balance ?? 0)}</div>
           </div>
         </div>
+
+        {/* 예약 대기 중인 주문 (예약 시간 전) */}
+        {reservedOrders.length > 0 && (
+          <div className="mb-6 p-4 rounded-rodem-sm bg-rodem-purple-light border border-rodem-purple/30">
+            <h3 className="font-bold text-lg text-rodem-purple mb-2">🕐 예약된 주문</h3>
+            <div className="space-y-2">
+              {reservedOrders.map((order) => (
+                <div key={order.id} className="p-3 rounded-rodem-sm bg-white border border-rodem-border-light">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-base font-bold text-rodem-purple">
+                      {new Date(order.scheduled_for!).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 예약
+                    </span>
+                    <span className="text-base font-bold text-rodem-text">{formatPrice(order.total_price)}</span>
+                  </div>
+                  <div className="text-sm text-rodem-text-sub">
+                    {order.order_items?.map((item, i) => (
+                      <span key={i}>{(item.menu_items as unknown as { name: string })?.name} x{item.quantity}{i < order.order_items.length - 1 ? ', ' : ''}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <h3 className="font-bold text-lg text-rodem-text mb-3">최근 주문</h3>
         <div className="space-y-2">
