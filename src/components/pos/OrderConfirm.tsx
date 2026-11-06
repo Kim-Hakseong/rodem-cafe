@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { formatPrice, cn } from '@/lib/utils'
 import { guide } from '@/lib/voice-guide'
 import { PAYMENT_METHODS } from '@/lib/constants'
@@ -34,6 +34,13 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
   const [submitting, setSubmitting] = useState(false)
   const [isReservation, setIsReservation] = useState(false)
   const [reservationTime, setReservationTime] = useState('')
+  // 시간 선택 후 주문 버튼이 화면 밖에 있으면 자동으로 보이게 스크롤
+  const actionsRef = useRef<HTMLDivElement>(null)
+
+  const handleSelectTime = (slot: string) => {
+    setReservationTime(slot)
+    actionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }
 
   const timeSlots = useMemo(() => generateTimeSlots(), [])
 
@@ -155,10 +162,10 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
 
       {/* Reservation toggle */}
       <div className="bg-white rounded-rodem-sm border border-rodem-border-light p-4 mb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="font-bold text-base text-rodem-text">🕐 예약 주문</div>
-            <div className="text-sm text-rodem-text-sub mt-0.5">대기열 ‘예약’ 칸에 바로 표시되고, 예약 시간에 제조가 시작됩니다</div>
+            <div className="font-bold text-[2rem] leading-tight text-rodem-text">🕐 예약 주문</div>
+            <div className="text-lg text-rodem-text-sub mt-1 break-keep">대기열 ‘예약’ 칸에 바로 표시되고, 예약 시간에 제조가 시작됩니다</div>
           </div>
           <button
             onClick={() => { setIsReservation(!isReservation); setReservationTime('') }}
@@ -176,14 +183,14 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
 
         {isReservation && (
           <div className="mt-3">
-            <div className="text-sm text-rodem-text-sub mb-2">시간 선택</div>
-            <div className="grid grid-cols-4 gap-1.5 max-h-40 overflow-y-auto">
+            <div className="text-xl font-semibold text-rodem-text-sub mb-2">시간 선택</div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-40 overflow-y-auto">
               {timeSlots.map((slot) => (
                 <button
                   key={slot}
-                  onClick={() => setReservationTime(slot)}
+                  onClick={() => handleSelectTime(slot)}
                   className={cn(
-                    'py-2 rounded-lg text-sm font-semibold cursor-pointer border transition-all',
+                    'py-2.5 rounded-lg text-lg sm:text-xl font-bold whitespace-nowrap cursor-pointer border transition-all',
                     reservationTime === slot
                       ? 'bg-rodem-gold text-white border-rodem-gold'
                       : 'bg-rodem-card text-rodem-text border-rodem-border-light'
@@ -197,17 +204,17 @@ export default function OrderConfirm({ member, cart, payments, cartTotal, onComp
         )}
       </div>
 
-      <div className="flex gap-3">
+      <div ref={actionsRef} className="flex gap-3">
         <button
           onClick={onBack}
-          className="flex-1 py-3.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base"
+          className="flex-1 py-3 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-bold cursor-pointer text-[2rem] leading-tight whitespace-nowrap"
         >
           ← 이전
         </button>
         <button
           onClick={handleSubmit}
           disabled={submitting}
-          className="flex-[2] py-3.5 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold text-base cursor-pointer shadow-[0_6px_24px_rgba(201,162,39,0.2)] disabled:opacity-50"
+          className="flex-[2] py-3 px-2 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold text-[2rem] leading-tight break-keep cursor-pointer shadow-[0_6px_24px_rgba(201,162,39,0.2)] disabled:opacity-50"
         >
           {submitting ? '처리 중...' : isReservation ? `🕐 ${reservationTime || '시간 선택'} 예약` : '✅ 주문 완료'}
         </button>

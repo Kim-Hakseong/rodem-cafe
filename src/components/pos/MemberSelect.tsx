@@ -160,14 +160,15 @@ export default function MemberSelect({ onSelect }: MemberSelectProps) {
                   'hover:-translate-y-[2px] hover:shadow-md'
                 )}
               >
-                <div className="font-bold text-lg text-rodem-text">{member.name}</div>
+                {/* 어르신 가독성: 이름 크게 (휴대폰은 한 단계 작게), 길면 버튼 안에서 줄바꿈 */}
+                <div className="font-bold text-2xl sm:text-[2.25rem] leading-tight text-rodem-text break-all">{member.name}</div>
                 {hasCredit && (
-                  <div className="text-sm text-rodem-orange font-semibold mt-1">
+                  <div className="text-lg text-rodem-orange font-semibold mt-1">
                     미결제 {formatPrice(member.credit_balance!)}
                   </div>
                 )}
                 {(member.prepaid_balance ?? 0) > 0 && (
-                  <div className="text-sm text-rodem-purple font-semibold mt-0.5">
+                  <div className="text-lg text-rodem-purple font-semibold mt-0.5">
                     선불 {formatPrice(member.prepaid_balance!)}
                   </div>
                 )}
