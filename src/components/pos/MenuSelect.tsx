@@ -30,8 +30,11 @@ const EMOJI_MAP: Record<string, string> = {
 
 const SHOT_OPTIONS = ['보통', '연하게'] as const
 
-function isAmericano(item: MenuItem): boolean {
-  return item.name.includes('아메리카노')
+// 샷 농도(보통/연하게) 선택 대상: 아메리카노 + 라떼류 (초코라떼는 샷이 없어 제외)
+function hasShotOption(item: MenuItem): boolean {
+  const { name } = item
+  if (name.includes('아메리카노')) return true
+  return name.includes('라떼') && !name.includes('초코')
 }
 
 function cartKey(id: string, shot?: string): string {
@@ -84,7 +87,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
   }
 
   const addToCart = (item: MenuItem) => {
-    if (isAmericano(item)) {
+    if (hasShotOption(item)) {
       setShotModal(item)
       return
     }
@@ -200,7 +203,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
                         </div>
                       )
                     })}
-                    {isAmericano(item) && (
+                    {hasShotOption(item) && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setShotModal(item) }}
                         className="w-full text-sm text-rodem-gold font-semibold bg-rodem-gold-light rounded-lg py-1 cursor-pointer border-none mt-1"
@@ -238,20 +241,20 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
               )
             })}
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="text-[3rem] font-bold text-rodem-text leading-tight">
               합계 {formatPrice(cartTotal)}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={onBack}
-                className="px-4 py-3.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base"
+                className="px-5 py-3 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-bold cursor-pointer text-[2rem] leading-tight whitespace-nowrap"
               >
                 ← 이전
               </button>
               <button
                 onClick={() => { guide('성도를 선택해주세요'); onNext() }}
-                className="px-6 py-3.5 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold cursor-pointer text-base shadow-[0_4px_16px_rgba(201,162,39,0.2)]"
+                className="px-7 py-3 rounded-rodem-sm bg-gradient-to-br from-[#f2d76a] via-[#dbb44a] to-[#c9a020] text-white font-bold cursor-pointer text-[2rem] leading-tight whitespace-nowrap shadow-[0_4px_16px_rgba(201,162,39,0.2)]"
               >
                 다음 →
               </button>
@@ -264,7 +267,7 @@ export default function MenuSelect({ cart, setCart, onNext, onBack, cartTotal }:
         <div className="border-t border-rodem-border-light bg-white p-5">
           <button
             onClick={onBack}
-            className="px-4 py-3.5 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base"
+            className="px-5 py-3 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-bold cursor-pointer text-[2rem] leading-tight whitespace-nowrap"
           >
             ← 이전
           </button>

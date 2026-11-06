@@ -91,7 +91,7 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
             key={pm.id}
             onClick={() => handlePayment(pm.id)}
             className={cn(
-              'p-5 rounded-rodem-sm border-2 text-center cursor-pointer transition-all duration-200',
+              'p-4 sm:p-5 rounded-rodem-sm border-2 text-center cursor-pointer transition-all duration-200',
               'hover:-translate-y-[2px] hover:shadow-md',
               // 홀수 개일 때 마지막 버튼은 한 줄 전체 — 터치 타겟 유지
               i === visibleMethods.length - 1 && visibleMethods.length % 2 === 1 && 'col-span-2',
@@ -101,14 +101,14 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
               borderColor: pm.id === 'cash' ? '#5a9a6e' : pm.id === 'transfer' ? '#4a7fd4' : pm.id === 'credit' ? '#d49a4a' : '#7c5fbf',
             }}
           >
-            <div className="text-[32px] mb-2">{pm.icon}</div>
-            <div className="font-bold text-lg" style={{
+            <div className="text-[40px] mb-1">{pm.icon}</div>
+            <div className="font-bold text-[1.75rem] sm:text-[2.5rem] leading-tight break-keep" style={{
               color: pm.id === 'cash' ? '#5a9a6e' : pm.id === 'transfer' ? '#4a7fd4' : pm.id === 'credit' ? '#d49a4a' : '#7c5fbf',
             }}>
               {pm.label}
             </div>
             {pm.id === 'prepaid' && (
-              <div className="text-[15px] mt-1 text-rodem-text-sub">
+              <div className="text-xl mt-1 text-rodem-text-sub">
                 잔액 {formatPrice(member.prepaid_balance)}
               </div>
             )}
@@ -118,7 +118,7 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
 
       <button
         onClick={onBack}
-        className="w-full py-3 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-semibold cursor-pointer text-base"
+        className="w-full py-3 rounded-rodem-sm border border-rodem-border-light bg-white text-rodem-text-sub font-bold cursor-pointer text-[2rem] leading-tight break-keep"
       >
         ← 메뉴 선택으로 돌아가기
       </button>
@@ -127,12 +127,13 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
       {showTransferInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowTransferInfo(false)}>
           <div className="absolute inset-0 bg-[rgba(74,69,65,0.4)] backdrop-blur-[10px]" />
-          <div className="relative bg-gradient-to-br from-[#fefcf9] to-[#f8f4ec] rounded-rodem p-6 max-w-sm w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-bold text-rodem-text mb-4">🏦 계좌이체 안내</h3>
+          <div className="relative bg-gradient-to-br from-[#fefcf9] to-[#f8f4ec] rounded-rodem p-6 max-w-lg w-full shadow-2xl max-h-[calc(100vh-2rem)] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-2xl font-bold text-rodem-text mb-4">🏦 계좌이체 안내</h3>
             <div className="bg-rodem-blue-light p-4 rounded-rodem-sm mb-4">
-              <div className="text-base text-rodem-text-sub mb-1">{BANK_ACCOUNT.bank}</div>
-              <div className="text-[22px] font-bold text-rodem-blue">{BANK_ACCOUNT.number}</div>
-              <div className="text-sm text-rodem-text-sub mt-1">{BANK_ACCOUNT.holder}</div>
+              <div className="text-xl font-semibold text-rodem-text-sub mb-1">{BANK_ACCOUNT.bank}</div>
+              {/* 계좌번호: 한 줄 유지, 좁은 화면에서는 한 단계 작게 */}
+              <div className="text-[1.75rem] sm:text-[2.25rem] font-bold text-rodem-blue leading-tight whitespace-nowrap tracking-tight">{BANK_ACCOUNT.number}</div>
+              <div className="text-base text-rodem-text-sub mt-1 break-keep">{BANK_ACCOUNT.holder}</div>
             </div>
 
             {/* QR 코드 — 스캔 시 계좌번호 복사 페이지로 이동 */}
@@ -147,25 +148,25 @@ export default function PaymentSelect({ member, cartTotal, onSelect, onBack, mod
             )}
 
             <div className="text-center mb-4">
-              <div className="text-base text-rodem-text-sub">입금 금액</div>
-              <div className="text-[22px] font-bold text-rodem-text">{formatPrice(cartTotal)}</div>
+              <div className="text-xl text-rodem-text-sub">입금 금액</div>
+              <div className="text-[2rem] font-bold text-rodem-text leading-tight">{formatPrice(cartTotal)}</div>
             </div>
 
             {mode === 'staff' ? (
               <button
                 onClick={handleTransferConfirm}
-                className="w-full py-3 rounded-rodem-sm bg-gradient-to-br from-[#4a7fd4] to-[#3a6fc4] text-white font-bold cursor-pointer text-base"
+                className="w-full py-3 rounded-rodem-sm bg-gradient-to-br from-[#4a7fd4] to-[#3a6fc4] text-white font-bold cursor-pointer text-[2rem] leading-tight"
               >
                 이체 확인 완료
               </button>
             ) : (
               <>
-                <p className="text-center text-base text-rodem-text-sub mb-3">
+                <p className="text-center text-xl text-rodem-text-sub mb-3 break-keep">
                   위 계좌로 이체해 주세요.<br />봉사자가 입금을 확인합니다.
                 </p>
                 <button
                   onClick={handleTransferConfirm}
-                  className="w-full py-3 rounded-rodem-sm bg-gradient-to-br from-[#4a7fd4] to-[#3a6fc4] text-white font-bold cursor-pointer text-base"
+                  className="w-full py-3 rounded-rodem-sm bg-gradient-to-br from-[#4a7fd4] to-[#3a6fc4] text-white font-bold cursor-pointer text-[2rem] leading-tight"
                 >
                   주문 접수하기
                 </button>
